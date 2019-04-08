@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: MIT
  */
 
-import PluginRegistry from './plugins'
-import ServerProxy from './server'
+import PluginRegistry from './pluginRegistry'
+import ServerProxy from './serverProxy'
 
 const cvat = {
     server: {},
@@ -17,7 +17,6 @@ const cvat = {
         version: '1.0.0',
     },
 };
-
 
 {
     async function apiWrapper(wrappedFunc, ...args) {
@@ -76,8 +75,6 @@ const cvat = {
         return result;
     }
 
-
-
     const pluginRegistry = new PluginRegistry();
     about.implementation = () => {
         throw Error('Is not implemented');
@@ -121,3 +118,8 @@ const cvat = {
     cvat.jobs.get = getJobs;
     cvat.users.get = getUsers;
 }
+
+global.cvat = cvat;
+
+// TODO: Server proxy
+// TODO: Plugins installation
