@@ -94,7 +94,157 @@
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
-eval("/* WEBPACK VAR INJECTION */(function(global) {\n\nvar _pluginRegistry = _interopRequireDefault(__webpack_require__(/*! ./pluginRegistry */ \"./babel.build/pluginRegistry.js\"));\n\nvar _serverProxy = _interopRequireDefault(__webpack_require__(/*! ./serverProxy */ \"./babel.build/serverProxy.js\"));\n\nfunction _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }\n\n/*\n * Copyright (C) 2018 Intel Corporation\n * SPDX-License-Identifier: MIT\n */\nconst cvat = {\n  server: {},\n  tasks: {},\n  jobs: {},\n  users: {},\n  plugins: {},\n  config: {},\n  client: {\n    version: '1.0.0'\n  }\n};\n{\n  async function apiWrapper(wrappedFunc, ...args) {\n    const pluginList = cvat.plugins.list();\n\n    for (const plugin of pluginList) {\n      const pluginDecorators = plugin.functions.filter(obj => obj.callback === wrappedFunc)[0];\n\n      if (pluginDecorators && pluginDecorators.enter) {\n        pluginDecorators.enter(plugin, ...args);\n      }\n    }\n\n    const result = wrappedFunc(...args);\n\n    for (const plugin of pluginList) {\n      const pluginDecorators = plugin.functions.filter(obj => obj.callback === wrappedFunc)[0];\n\n      if (pluginDecorators && pluginDecorators.leave) {\n        pluginDecorators.leave(plugin, result, ...args);\n      }\n    }\n  }\n\n  async function about(...args) {\n    const result = await apiWrapper(about.implementation, ...args);\n    return result;\n  }\n\n  async function share(...args) {\n    const result = await apiWrapper(share.implementation, ...args);\n    return result;\n  }\n\n  async function list(...args) {\n    const result = await apiWrapper(list.implementation, ...args);\n    return result;\n  }\n\n  async function register(...args) {\n    const result = await apiWrapper(register.implementation, ...args);\n    return result;\n  }\n\n  async function getTasks(...args) {\n    const result = await apiWrapper(getTasks.implementation, ...args);\n    return result;\n  }\n\n  async function getJobs(...args) {\n    const result = await apiWrapper(getJobs.implementation, ...args);\n    return result;\n  }\n\n  async function getUsers(...args) {\n    const result = await apiWrapper(getUsers.implementation, ...args);\n    return result;\n  }\n\n  const pluginRegistry = new _pluginRegistry.default();\n\n  about.implementation = () => {\n    throw Error('Is not implemented');\n  };\n\n  share.implementation = () => {\n    throw Error('Is not implemented');\n  };\n\n  register.implementation = () => {\n    throw Error('Is not implemented');\n  };\n\n  list.implementation = () => {\n    throw Error('Is not implemented');\n  };\n\n  getTasks.implementation = () => {\n    throw Error('Is not implemented');\n  };\n\n  getJobs.implementation = () => {\n    throw Error('Is not implemented');\n  };\n\n  getUsers.implementation = () => {\n    throw Error('Is not implemented');\n  };\n\n  cvat.plugins = {\n    list,\n    register\n  };\n  cvat.server.about = {\n    about,\n    share\n  };\n  cvat.tasks.get = getTasks;\n  cvat.jobs.get = getJobs;\n  cvat.users.get = getUsers;\n}\nglobal.cvat = cvat; // TODO: Server proxy\n// TODO: Plugins installation\n/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../node_modules/webpack/buildin/global.js */ \"./node_modules/webpack/buildin/global.js\")))\n\n//# sourceURL=webpack:///./babel.build/api.js?");
+/* WEBPACK VAR INJECTION */(function(global) {
+
+var _pluginRegistry = _interopRequireDefault(__webpack_require__(/*! ./pluginRegistry */ "./babel.build/pluginRegistry.js"));
+
+var _serverProxy = _interopRequireDefault(__webpack_require__(/*! ./serverProxy */ "./babel.build/serverProxy.js"));
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+/*
+ * Copyright (C) 2018 Intel Corporation
+ * SPDX-License-Identifier: MIT
+ */
+{
+  const cvat = {
+    server: {},
+    tasks: {},
+    jobs: {},
+    users: {},
+    plugins: {},
+    config: {
+      host: '',
+      api: 'v1'
+    },
+    client: {}
+  };
+
+  async function apiWrapper(wrappedFunc, ...args) {
+    const pluginList = cvat.plugins.list();
+
+    for (const plugin of pluginList) {
+      const pluginDecorators = plugin.functions.filter(obj => obj.callback === wrappedFunc)[0];
+
+      if (pluginDecorators && pluginDecorators.enter) {
+        pluginDecorators.enter(plugin, ...args);
+      }
+    }
+
+    const result = wrappedFunc(...args);
+
+    for (const plugin of pluginList) {
+      const pluginDecorators = plugin.functions.filter(obj => obj.callback === wrappedFunc)[0];
+
+      if (pluginDecorators && pluginDecorators.leave) {
+        pluginDecorators.leave(plugin, result, ...args);
+      }
+    }
+  }
+
+  async function list(...args) {
+    const result = await list.implementation(...args);
+    return result;
+  }
+
+  async function register(...args) {
+    const result = await register.implementation(...args);
+    return result;
+  }
+
+  async function about(...args) {
+    const result = await apiWrapper(about.implementation, ...args);
+    return result;
+  }
+
+  async function share(...args) {
+    const result = await apiWrapper(share.implementation, ...args);
+    return result;
+  }
+
+  async function getTasks(...args) {
+    const result = await apiWrapper(getTasks.implementation, ...args);
+    return result;
+  }
+
+  async function getJobs(...args) {
+    const result = await apiWrapper(getJobs.implementation, ...args);
+    return result;
+  }
+
+  async function getUsers(...args) {
+    const result = await apiWrapper(getUsers.implementation, ...args);
+    return result;
+  }
+
+  const pluginRegistry = new _pluginRegistry.default();
+
+  about.implementation = () => {
+    throw Error('Is not implemented');
+  };
+
+  share.implementation = () => {
+    throw Error('Is not implemented');
+  };
+
+  register.implementation = () => {
+    throw Error('Is not implemented');
+  };
+
+  list.implementation = () => {
+    throw Error('Is not implemented');
+  };
+
+  getTasks.implementation = () => {
+    throw Error('Is not implemented');
+  };
+
+  getJobs.implementation = () => {
+    throw Error('Is not implemented');
+  };
+
+  getUsers.implementation = () => {
+    throw Error('Is not implemented');
+  };
+
+  Object.defineProperty(cvat.plugins, 'list', {
+    value: list,
+    writable: false
+  });
+  Object.defineProperty(cvat.plugins, 'register', {
+    value: register,
+    writable: false
+  });
+  Object.defineProperty(cvat.server, 'about', {
+    value: about,
+    writable: false
+  });
+  Object.defineProperty(cvat.server, 'share', {
+    value: share,
+    writable: false
+  });
+  Object.defineProperty(cvat.client, 'get', {
+    value: getTasks,
+    writable: false
+  });
+  Object.defineProperty(cvat.jobs, 'get', {
+    value: getJobs,
+    writable: false
+  });
+  Object.defineProperty(cvat.users, 'get', {
+    value: getUsers,
+    writable: false
+  });
+  Object.defineProperty(cvat.client, 'version', {
+    value: '1.0.0',
+    writable: false
+  });
+  global.cvat = Object.freeze(cvat);
+} // TODO: Server proxy
+// TODO: Plugins installation
+// TODO: Setup debugging
+// TODO: exception class
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../node_modules/webpack/buildin/global.js */ "./node_modules/webpack/buildin/global.js")))
 
 /***/ }),
 
@@ -106,7 +256,32 @@ eval("/* WEBPACK VAR INJECTION */(function(global) {\n\nvar _pluginRegistry = _i
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
-eval("\n\nObject.defineProperty(exports, \"__esModule\", {\n  value: true\n});\nexports.default = void 0;\n\n/*\n * Copyright (C) 2018 Intel Corporation\n * SPDX-License-Identifier: MIT\n */\nclass PluginRegistry {\n  constructor() {\n    const plugins = [];\n\n    this.list = () => plugins;\n\n    this.register = plugin => {\n      // process plugin\n      plugins.push(plugin);\n    };\n  }\n\n}\n\nexports.default = PluginRegistry;\n\n//# sourceURL=webpack:///./babel.build/pluginRegistry.js?");
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = void 0;
+
+/*
+ * Copyright (C) 2018 Intel Corporation
+ * SPDX-License-Identifier: MIT
+ */
+class PluginRegistry {
+  constructor() {
+    const plugins = [];
+
+    this.list = () => plugins;
+
+    this.register = plugin => {
+      // process plugin
+      plugins.push(plugin);
+    };
+  }
+
+}
+
+exports.default = PluginRegistry;
 
 /***/ }),
 
@@ -118,7 +293,25 @@ eval("\n\nObject.defineProperty(exports, \"__esModule\", {\n  value: true\n});\n
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
-eval("\n\nObject.defineProperty(exports, \"__esModule\", {\n  value: true\n});\nexports.default = void 0;\n\n/*\n * Copyright (C) 2018 Intel Corporation\n * SPDX-License-Identifier: MIT\n */\nclass ServerProxy {\n  constructor() {\n    this.a = 5;\n  }\n\n}\n\nexports.default = ServerProxy;\n\n//# sourceURL=webpack:///./babel.build/serverProxy.js?");
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = void 0;
+
+/*
+ * Copyright (C) 2018 Intel Corporation
+ * SPDX-License-Identifier: MIT
+ */
+class ServerProxy {
+  constructor() {
+    this.a = 5;
+  }
+
+}
+
+exports.default = ServerProxy;
 
 /***/ }),
 
@@ -129,8 +322,29 @@ eval("\n\nObject.defineProperty(exports, \"__esModule\", {\n  value: true\n});\n
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-eval("var g;\n\n// This works in non-strict mode\ng = (function() {\n\treturn this;\n})();\n\ntry {\n\t// This works if eval is allowed (see CSP)\n\tg = g || new Function(\"return this\")();\n} catch (e) {\n\t// This works if the window reference is available\n\tif (typeof window === \"object\") g = window;\n}\n\n// g can still be undefined, but nothing to do about it...\n// We return undefined, instead of nothing here, so it's\n// easier to handle this case. if(!global) { ...}\n\nmodule.exports = g;\n\n\n//# sourceURL=webpack:///(webpack)/buildin/global.js?");
+var g;
+
+// This works in non-strict mode
+g = (function() {
+	return this;
+})();
+
+try {
+	// This works if eval is allowed (see CSP)
+	g = g || new Function("return this")();
+} catch (e) {
+	// This works if the window reference is available
+	if (typeof window === "object") g = window;
+}
+
+// g can still be undefined, but nothing to do about it...
+// We return undefined, instead of nothing here, so it's
+// easier to handle this case. if(!global) { ...}
+
+module.exports = g;
+
 
 /***/ })
 
 /******/ });
+//# sourceMappingURL=cvat.js.map

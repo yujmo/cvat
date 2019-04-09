@@ -3,8 +3,10 @@
  * SPDX-License-Identifier: MIT
  */
 
-export default class ServerProxy {
+class ServerProxy {
     constructor() {
         this.a = 5;
     }
 }
+
+module.exports = ServerProxy;

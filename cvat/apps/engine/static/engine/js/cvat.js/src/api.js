@@ -3,22 +3,27 @@
  * SPDX-License-Identifier: MIT
  */
 
-import PluginRegistry from './pluginRegistry'
-import ServerProxy from './serverProxy'
-
-const cvat = {
-    server: {},
-    tasks: {},
-    jobs: {},
-    users: {},
-    plugins: {},
-    config: {},
-    client: {
-        version: '1.0.0',
-    },
-};
+/* global
+    require:false
+*/
 
 {
+    const PluginRegistry = require('./pluginRegistry');
+    const ServerProxy = require('./serverProxy');
+
+    const cvat = {
+        server: {},
+        tasks: {},
+        jobs: {},
+        users: {},
+        plugins: {},
+        config: {
+            host: '',
+            api: 'v1',
+        },
+        client: {},
+    };
+
     async function apiWrapper(wrappedFunc, ...args) {
         const pluginList = cvat.plugins.list();
         for (const plugin of pluginList) {
@@ -40,6 +45,16 @@ const cvat = {
         }
     }
 
+    async function list(...args) {
+        const result = await list.implementation(...args);
+        return result;
+    }
+
+    async function register(...args) {
+        const result = await register.implementation(...args)
+        return result;
+    }
+
     async function about(...args) {
         const result = await apiWrapper(about.implementation, ...args);
         return result;
@@ -47,16 +62,6 @@ const cvat = {
 
     async function share(...args) {
         const result = await apiWrapper(share.implementation, ...args);
-        return result;
-    }
-
-    async function list(...args) {
-        const result = await apiWrapper(list.implementation, ...args);
-        return result;
-    }
-
-    async function register(...args) {
-        const result = await apiWrapper(register.implementation, ...args);
         return result;
     }
 
@@ -104,22 +109,51 @@ const cvat = {
         throw Error('Is not implemented');
     };
 
-    cvat.plugins = {
-        list,
-        register,
-    };
+    Object.defineProperty(cvat.plugins, 'list', {
+        value: list,
+        writable: false,
+    });
 
-    cvat.server.about = {
-        about,
-        share,
-    };
+    Object.defineProperty(cvat.plugins, 'register', {
+        value: register,
+        writable: false,
+    });
 
-    cvat.tasks.get = getTasks;
-    cvat.jobs.get = getJobs;
-    cvat.users.get = getUsers;
+    Object.defineProperty(cvat.server, 'about', {
+        value: about,
+        writable: false,
+    });
+
+    Object.defineProperty(cvat.server, 'share', {
+        value: share,
+        writable: false,
+    });
+
+    Object.defineProperty(cvat.client, 'get', {
+        value: getTasks,
+        writable: false,
+    });
+
+    Object.defineProperty(cvat.jobs, 'get', {
+        value: getJobs,
+        writable: false,
+    });
+
+    Object.defineProperty(cvat.users, 'get', {
+        value: getUsers,
+        writable: false,
+    });
+
+    Object.defineProperty(cvat.client, 'version', {
+        value: '1.0.0',
+        writable: false,
+    });
+
+    global.cvat = Object.freeze(cvat);
 }
 
-global.cvat = cvat;
 
 // TODO: Server proxy
 // TODO: Plugins installation
+// TODO: Setup debugging
+// TODO: exception class

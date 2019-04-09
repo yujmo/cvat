@@ -118,6 +118,17 @@
             "cwd": "${workspaceFolder}",
             "env": {}
         },
+        {
+            "name": "Launch via npm",
+            "type": "node",
+            "request": "launch",
+            "cwd": "${workspaceFolder}/cvat/apps/engine/static/engine/js/cvat.js",
+            "runtimeExecutable": "npm",
+            "runtimeArgs": [
+                "run-script", "debug"
+            ],
+            "port": 9229
+        }
     ],
     "compounds": [
         {

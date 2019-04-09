@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-export default class PluginRegistry {
+class PluginRegistry {
     constructor() {
         const plugins = [];
 
@@ -14,3 +14,5 @@ export default class PluginRegistry {
         };
     }
 }
+
+module.exports = PluginRegistry;
