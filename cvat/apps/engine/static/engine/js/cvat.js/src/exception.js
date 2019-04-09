@@ -4,15 +4,17 @@
 */
 
 
-class Exception extends Error {
-    constructor(...args) {
-        super(...args);
-        this.a = null;
+{
+    class Exception extends Error {
+        constructor(...args) {
+            super(...args);
+            this.a = null;
+        }
+
+        async save() {
+            this.a = null;
+        }
     }
 
-    async save() {
-        this.a = null;
-    }
+    module.exports = Exception;
 }
-
-module.exports = Exception;

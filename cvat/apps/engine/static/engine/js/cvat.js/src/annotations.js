@@ -3,10 +3,29 @@
 * SPDX-License-Identifier: MIT
 */
 
-class Annotations {
-    constructor() {
-        
+{
+    class Base {
+        constructor() {
+            this.annotations = {};
+        }
     }
-}
 
-module.exports = Annotations;
+    class Job extends Base {
+        constructor(...args) {
+            super(...args);
+            this.b = 0;
+        }
+    }
+
+    class Task extends Base {
+        constructor(...args) {
+            super(...args);
+            this.c = 0;
+        }
+    }
+
+    module.exports = {
+        Task,
+        Job,
+    };
+}

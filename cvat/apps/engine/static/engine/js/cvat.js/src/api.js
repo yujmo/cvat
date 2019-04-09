@@ -8,7 +8,7 @@
     global:false
 */
 
-function build() {
+{
     const PluginRegistry = require('./plugins');
 
     const annotationsModule = {
@@ -216,9 +216,6 @@ function build() {
     global.cvat = Object.freeze(cvat);
     PluginRegistry.init();
 }
-
-build();
-
 
 global.cvat.server.about.implementation = async () => {
     return 'Hello world';
