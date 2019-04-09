@@ -96,222 +96,289 @@
 "use strict";
 /* WEBPACK VAR INJECTION */(function(global) {
 
-var _pluginRegistry = _interopRequireDefault(__webpack_require__(/*! ./pluginRegistry */ "./babel.build/pluginRegistry.js"));
-
-var _serverProxy = _interopRequireDefault(__webpack_require__(/*! ./serverProxy */ "./babel.build/serverProxy.js"));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
 /*
- * Copyright (C) 2018 Intel Corporation
- * SPDX-License-Identifier: MIT
- */
-{
+* Copyright (C) 2018 Intel Corporation
+* SPDX-License-Identifier: MIT
+*/
+
+/* global
+    require:false
+    global:false
+*/
+function build() {
+  const PluginRegistry = __webpack_require__(/*! ./plugins */ "./babel.build/plugins.js");
+
+  const annotationsModule = {
+    async upload(file) {
+      const result = await PluginRegistry.apiWrapper(annotationsModule.upload, file);
+      return result;
+    },
+
+    async save() {
+      const result = await PluginRegistry.apiWrapper(annotationsModule.save);
+      return result;
+    },
+
+    async clear() {
+      const result = await PluginRegistry.apiWrapper(annotationsModule.clear);
+      return result;
+    },
+
+    async dump() {
+      const result = await PluginRegistry.apiWrapper(annotationsModule.dump);
+      return result;
+    },
+
+    async statistics() {
+      const result = await PluginRegistry.apiWrapper(annotationsModule.statistics);
+      return result;
+    },
+
+    async put(arrayOfObjects = []) {
+      const result = await PluginRegistry.apiWrapper(annotationsModule.put, arrayOfObjects);
+      return result;
+    },
+
+    async get(frame, filter = {}) {
+      const result = await PluginRegistry.apiWrapper(annotationsModule.get, frame, filter);
+      return result;
+    },
+
+    async search(filter, frameFrom, frameTo) {
+      const result = await PluginRegistry.apiWrapper(annotationsModule.search, filter, frameFrom, frameTo);
+      return result;
+    },
+
+    async select(frame, x, y) {
+      const result = await PluginRegistry.apiWrapper(annotationsModule.select, frame, x, y);
+      return result;
+    }
+
+  };
+  const framesModule = {
+    async get(frame) {
+      const result = await PluginRegistry.apiWrapper(framesModule.get, frame);
+      return result;
+    }
+
+  };
+  const logsModule = {
+    async put(logType, details) {
+      const result = await PluginRegistry.apiWrapper(logsModule.put, logType, details);
+      return result;
+    },
+
+    async save() {
+      const result = await PluginRegistry.apiWrapper(logsModule.save);
+      return result;
+    }
+
+  };
+  const actionsModule = {
+    async undo(count) {
+      const result = await PluginRegistry.apiWrapper(actionsModule.undo, count);
+      return result;
+    },
+
+    async redo(count) {
+      const result = await PluginRegistry.apiWrapper(actionsModule.redo, count);
+      return result;
+    },
+
+    async clear() {
+      const result = await PluginRegistry.apiWrapper(actionsModule.clear);
+      return result;
+    }
+
+  };
+  const eventsModule = {
+    async subscribe(eventType, callback) {
+      const result = await PluginRegistry.apiWrapper(eventsModule.subscribe, eventType, callback);
+      return result;
+    },
+
+    async unsubscribe(eventType, callback = null) {
+      const result = await PluginRegistry.apiWrapper(eventsModule.unsubscribe, eventType, callback);
+      return result;
+    }
+
+  };
   const cvat = {
-    server: {},
-    tasks: {},
-    jobs: {},
-    users: {},
-    plugins: {},
+    server: {
+      async about() {
+        const result = await PluginRegistry.apiWrapper(cvat.server.about);
+        return result;
+      },
+
+      async share(directory = '/') {
+        const result = await PluginRegistry.apiWrapper(cvat.server.share, directory);
+        return result;
+      }
+
+    },
+    tasks: {
+      async get(filter = {}) {
+        const result = await PluginRegistry.apiWrapper(cvat.tasks.get, filter);
+        return result;
+      }
+
+    },
+    jobs: {
+      async get(filter = {}) {
+        const result = await PluginRegistry.apiWrapper(cvat.jobs.get, filter);
+        return result;
+      }
+
+    },
+    users: {
+      async get(filter = {}) {
+        const result = await PluginRegistry.apiWrapper(cvat.users.get, filter);
+        return result;
+      }
+
+    },
+    plugins: {
+      async list() {
+        const result = await PluginRegistry.apiWrapper(cvat.plugins.list);
+        return result;
+      },
+
+      async register() {
+        const result = await PluginRegistry.apiWrapper(cvat.plugins.register);
+        return result;
+      }
+
+    },
     config: {
       host: '',
       api: 'v1'
     },
-    client: {}
-  };
+    client: {
+      version: '1.0.0'
+    },
+    Job: {
+      async save() {
+        const result = await PluginRegistry.apiWrapper(cvat.Job.save);
+        return result;
+      },
 
-  async function apiWrapper(wrappedFunc, ...args) {
-    const pluginList = cvat.plugins.list();
+      annotations: Object.freeze(annotationsModule),
+      frames: Object.freeze(framesModule),
+      logs: Object.freeze(logsModule),
+      actions: Object.freeze(actionsModule),
+      events: Object.freeze(eventsModule)
+    },
+    Task: {
+      async delete() {
+        const result = await PluginRegistry.apiWrapper(cvat.Task.delete);
+        return result;
+      },
 
-    for (const plugin of pluginList) {
-      const pluginDecorators = plugin.functions.filter(obj => obj.callback === wrappedFunc)[0];
+      async save() {
+        const result = await PluginRegistry.apiWrapper(cvat.Task.save);
+        return result;
+      },
 
-      if (pluginDecorators && pluginDecorators.enter) {
-        pluginDecorators.enter(plugin, ...args);
-      }
+      annotations: Object.freeze(annotationsModule),
+      frames: Object.freeze(framesModule),
+      logs: Object.freeze(logsModule),
+      actions: Object.freeze(actionsModule),
+      events: Object.freeze(eventsModule)
     }
-
-    const result = wrappedFunc(...args);
-
-    for (const plugin of pluginList) {
-      const pluginDecorators = plugin.functions.filter(obj => obj.callback === wrappedFunc)[0];
-
-      if (pluginDecorators && pluginDecorators.leave) {
-        pluginDecorators.leave(plugin, result, ...args);
-      }
-    }
-  }
-
-  async function list(...args) {
-    const result = await list.implementation(...args);
-    return result;
-  }
-
-  async function register(...args) {
-    const result = await register.implementation(...args);
-    return result;
-  }
-
-  async function about(...args) {
-    const result = await apiWrapper(about.implementation, ...args);
-    return result;
-  }
-
-  async function share(...args) {
-    const result = await apiWrapper(share.implementation, ...args);
-    return result;
-  }
-
-  async function getTasks(...args) {
-    const result = await apiWrapper(getTasks.implementation, ...args);
-    return result;
-  }
-
-  async function getJobs(...args) {
-    const result = await apiWrapper(getJobs.implementation, ...args);
-    return result;
-  }
-
-  async function getUsers(...args) {
-    const result = await apiWrapper(getUsers.implementation, ...args);
-    return result;
-  }
-
-  const pluginRegistry = new _pluginRegistry.default();
-
-  about.implementation = () => {
-    throw Error('Is not implemented');
   };
-
-  share.implementation = () => {
-    throw Error('Is not implemented');
-  };
-
-  register.implementation = () => {
-    throw Error('Is not implemented');
-  };
-
-  list.implementation = () => {
-    throw Error('Is not implemented');
-  };
-
-  getTasks.implementation = () => {
-    throw Error('Is not implemented');
-  };
-
-  getJobs.implementation = () => {
-    throw Error('Is not implemented');
-  };
-
-  getUsers.implementation = () => {
-    throw Error('Is not implemented');
-  };
-
-  Object.defineProperty(cvat.plugins, 'list', {
-    value: list,
-    writable: false
-  });
-  Object.defineProperty(cvat.plugins, 'register', {
-    value: register,
-    writable: false
-  });
-  Object.defineProperty(cvat.server, 'about', {
-    value: about,
-    writable: false
-  });
-  Object.defineProperty(cvat.server, 'share', {
-    value: share,
-    writable: false
-  });
-  Object.defineProperty(cvat.client, 'get', {
-    value: getTasks,
-    writable: false
-  });
-  Object.defineProperty(cvat.jobs, 'get', {
-    value: getJobs,
-    writable: false
-  });
-  Object.defineProperty(cvat.users, 'get', {
-    value: getUsers,
-    writable: false
-  });
-  Object.defineProperty(cvat.client, 'version', {
-    value: '1.0.0',
-    writable: false
-  });
+  cvat.server = Object.freeze(cvat.server);
+  cvat.tasks = Object.freeze(cvat.tasks);
+  cvat.jobs = Object.freeze(cvat.jobs);
+  cvat.users = Object.freeze(cvat.users);
+  cvat.plugins = Object.freeze(cvat.plugins);
+  cvat.client = Object.freeze(cvat.client);
+  cvat.Job = Object.freeze(cvat.Job);
+  cvat.Task = Object.freeze(cvat.Task);
   global.cvat = Object.freeze(cvat);
-} // TODO: Server proxy
+  PluginRegistry.init();
+}
+
+build();
+
+global.cvat.server.about.implementation = async () => {
+  return 'Hello world';
+};
+
+global.cvat.server.about().then(result => {
+  console.log(result);
+}).catch(error => {
+  console.log(error);
+}); // TODO: Server proxy
 // TODO: Plugins installation
-// TODO: Setup debugging
 // TODO: exception class
+// TODO: Documentation with http://yui.github.io/yuidoc/syntax/index.html
 /* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../node_modules/webpack/buildin/global.js */ "./node_modules/webpack/buildin/global.js")))
 
 /***/ }),
 
-/***/ "./babel.build/pluginRegistry.js":
-/*!***************************************!*\
-  !*** ./babel.build/pluginRegistry.js ***!
-  \***************************************/
+/***/ "./babel.build/plugins.js":
+/*!********************************!*\
+  !*** ./babel.build/plugins.js ***!
+  \********************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = void 0;
+/* WEBPACK VAR INJECTION */(function(global) {
 
 /*
- * Copyright (C) 2018 Intel Corporation
- * SPDX-License-Identifier: MIT
- */
-class PluginRegistry {
-  constructor() {
-    const plugins = [];
+* Copyright (C) 2018 Intel Corporation
+* SPDX-License-Identifier: MIT
+*/
 
-    this.list = () => plugins;
+/* global
+    global:false
+*/
+{
+  const plugins = [];
 
-    this.register = plugin => {
-      // process plugin
-      plugins.push(plugin);
-    };
+  class PluginRegistry {
+    static async apiWrapper(wrappedFunc, ...args) {
+      const pluginList = await global.cvat.plugins.list.implementation();
+
+      for (const plugin of pluginList) {
+        const pluginDecorators = plugin.functions.filter(obj => obj.callback === wrappedFunc)[0];
+
+        if (pluginDecorators && pluginDecorators.enter) {
+          pluginDecorators.enter(plugin, ...args);
+        }
+      }
+
+      let result = await wrappedFunc.implementation(...args);
+
+      for (const plugin of pluginList) {
+        const pluginDecorators = plugin.functions.filter(obj => obj.callback === wrappedFunc)[0];
+
+        if (pluginDecorators && pluginDecorators.leave) {
+          result = pluginDecorators.leave(plugin, result, ...args);
+        }
+      }
+
+      return result;
+    }
+
+    static async register() {// TODO
+    }
+
+    static async list() {
+      return plugins;
+    }
+
+    static async init() {
+      global.cvat.plugins.list.implementation = PluginRegistry.list;
+      global.cvat.plugins.register.implementation = PluginRegistry.register;
+    }
+
   }
 
+  module.exports = PluginRegistry;
 }
-
-exports.default = PluginRegistry;
-
-/***/ }),
-
-/***/ "./babel.build/serverProxy.js":
-/*!************************************!*\
-  !*** ./babel.build/serverProxy.js ***!
-  \************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = void 0;
-
-/*
- * Copyright (C) 2018 Intel Corporation
- * SPDX-License-Identifier: MIT
- */
-class ServerProxy {
-  constructor() {
-    this.a = 5;
-  }
-
-}
-
-exports.default = ServerProxy;
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../node_modules/webpack/buildin/global.js */ "./node_modules/webpack/buildin/global.js")))
 
 /***/ }),
 
