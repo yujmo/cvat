@@ -119,18 +119,18 @@
             "env": {}
         },
         {
-            "name": "CVAT_API_TESTS.js",
+            "name": "cvat.js test",
             "type": "node",
             "request": "launch",
             "cwd": "${workspaceFolder}/cvat/apps/engine/static/engine/js/cvat.js",
             "runtimeExecutable": "npm",
             "runtimeArgs": [
-                "run-script", "tests"
+                "run-script", "test"
             ],
             "port": 9229
         },
         {
-            "name": "CVAT_API.js",
+            "name": "cvat.js debug",
             "type": "node",
             "request": "launch",
             "cwd": "${workspaceFolder}/cvat/apps/engine/static/engine/js/cvat.js",
@@ -151,6 +151,6 @@
                 "RQ - low",
                 "git",
             ]
-        }
+        },
     ]
 }

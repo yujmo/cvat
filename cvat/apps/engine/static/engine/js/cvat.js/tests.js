@@ -10,4 +10,4 @@
 
 require("./dist/cvat")
 
-global.cvat = 5;
+console.log('Tests have been passed');

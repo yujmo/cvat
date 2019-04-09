@@ -310,7 +310,7 @@ global.cvat.server.about().then(result => {
   console.log(error);
 }); // TODO: Server proxy
 // TODO: Plugins installation
-// TODO: exception class
+// TODO: exception class, objectstate class
 // TODO: Documentation with http://yui.github.io/yuidoc/syntax/index.html
 /* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../node_modules/webpack/buildin/global.js */ "./node_modules/webpack/buildin/global.js")))
 
