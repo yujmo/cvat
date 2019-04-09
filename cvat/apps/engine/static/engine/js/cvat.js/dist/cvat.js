@@ -105,7 +105,7 @@
     require:false
     global:false
 */
-function build() {
+{
   const PluginRegistry = __webpack_require__(/*! ./plugins */ "./babel.build/plugins.js");
 
   const annotationsModule = {
@@ -297,8 +297,6 @@ function build() {
   global.cvat = Object.freeze(cvat);
   PluginRegistry.init();
 }
-
-build();
 
 global.cvat.server.about.implementation = async () => {
   return 'Hello world';

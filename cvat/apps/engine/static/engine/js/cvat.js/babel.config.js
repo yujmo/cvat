@@ -1,4 +1,4 @@
-module.exports = function (api) {
+module.exports = function setup(api) {
     api.cache(true);
 
     const plugins = [];
@@ -7,18 +7,18 @@ module.exports = function (api) {
             targets: {
                 chrome: 58,
             },
-            useBuiltIns: false,
+            useBuiltIns: 'usage',
             loose: false,
             spec: false,
             debug: false,
             include: [],
-            exclude: []
-        }]
+            exclude: [],
+        }],
     ];
 
 
     return {
         presets,
-        plugins
+        plugins,
     };
-}
+};
