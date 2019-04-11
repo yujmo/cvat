@@ -3,7 +3,7 @@
 * SPDX-License-Identifier: MIT
 */
 
-{
+(() => {
     class FrameData {
         constructor() {
             this.a = 5;
@@ -15,4 +15,4 @@
     }
 
     module.exports = FrameData;
-}
+})();

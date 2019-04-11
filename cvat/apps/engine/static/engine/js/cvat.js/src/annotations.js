@@ -3,7 +3,7 @@
 * SPDX-License-Identifier: MIT
 */
 
-{
+(() => {
     class Base {
         constructor() {
             this.annotations = {};
@@ -28,4 +28,4 @@
         Task,
         Job,
     };
-}
+})();

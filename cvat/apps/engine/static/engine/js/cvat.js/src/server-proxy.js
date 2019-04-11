@@ -3,7 +3,7 @@
 * SPDX-License-Identifier: MIT
 */
 
-{
+(() => {
     class ServerProxy {
         constructor() {
             async function about() {
@@ -75,4 +75,4 @@
     }
 
     module.exports = ServerProxy;
-}
+})();

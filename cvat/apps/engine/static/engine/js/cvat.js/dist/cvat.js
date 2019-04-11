@@ -86,6 +86,128 @@
 /************************************************************************/
 /******/ ({
 
+/***/ "./babel.build/annotations.js":
+/*!************************************!*\
+  !*** ./babel.build/annotations.js ***!
+  \************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+/*
+* Copyright (C) 2018 Intel Corporation
+* SPDX-License-Identifier: MIT
+*/
+(() => {
+  class Base {
+    constructor() {
+      this.annotations = {};
+    }
+
+  }
+
+  class Job extends Base {
+    constructor(...args) {
+      super(...args);
+      this.b = 0;
+    }
+
+  }
+
+  class Task extends Base {
+    constructor(...args) {
+      super(...args);
+      this.c = 0;
+    }
+
+  }
+
+  module.exports = {
+    Task,
+    Job
+  };
+})();
+
+/***/ }),
+
+/***/ "./babel.build/api-implementation.js":
+/*!*******************************************!*\
+  !*** ./babel.build/api-implementation.js ***!
+  \*******************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+/*
+* Copyright (C) 2018 Intel Corporation
+* SPDX-License-Identifier: MIT
+*/
+
+/* global
+    require:false
+*/
+(() => {
+  const PluginRegistry = __webpack_require__(/*! ./plugins */ "./babel.build/plugins.js");
+
+  const User = __webpack_require__(/*! ./user */ "./babel.build/user.js");
+
+  const {
+    Task,
+    Job
+  } = __webpack_require__(/*! ./annotations */ "./babel.build/annotations.js");
+
+  function implement(cvat) {
+    cvat.plugins.list.implementation = PluginRegistry.list;
+    cvat.plugins.register.implementation = PluginRegistry.register; // Stub
+
+    cvat.server.about.implementation = async () => {
+      return {
+        name: 'Computer Vision Annotation Tool',
+        description: 'CVAT is completely re-designed and re-implemented ' + 'version of Video Annotation Tool from Irvine, California ' + 'tool. It is free, online, interactive video and image ' + 'annotation tool for computer vision. It is being used by ' + 'our team to annotate million of objects with different ' + 'properties. Many UI and UX decisions are based on feedbacks' + 'from professional data annotation team.',
+        version: '0.4.dev20190411083901'
+      };
+    };
+
+    cvat.server.about.share.implementation = async () => {
+      return [{
+        name: 'file_1',
+        type: 'REG'
+      }, {
+        name: 'file_2',
+        type: 'REG'
+      }, {
+        name: 'file_3',
+        type: 'REG'
+      }, {
+        name: 'dir_1',
+        type: 'DIR'
+      }];
+    };
+
+    cvat.tasks.get.implementation = async () => {
+      return new Task();
+    };
+
+    cvat.jobs.get.implementation = async () => {
+      return new Job();
+    };
+
+    cvat.users.get.implementation = async () => {
+      return new User();
+    };
+
+    return cvat;
+  }
+
+  module.exports = implement;
+})();
+
+/***/ }),
+
 /***/ "./babel.build/api.js":
 /*!****************************!*\
   !*** ./babel.build/api.js ***!
@@ -105,7 +227,7 @@
     require:false
     global:false
 */
-{
+(() => {
   const PluginRegistry = __webpack_require__(/*! ./plugins */ "./babel.build/plugins.js");
 
   const annotationsModule = {
@@ -294,19 +416,11 @@
   cvat.client = Object.freeze(cvat.client);
   cvat.Job = Object.freeze(cvat.Job);
   cvat.Task = Object.freeze(cvat.Task);
-  global.cvat = Object.freeze(cvat);
-  PluginRegistry.init();
-}
 
-global.cvat.server.about.implementation = async () => {
-  return 'Hello world';
-};
+  const implementation = __webpack_require__(/*! ./api-implementation */ "./babel.build/api-implementation.js");
 
-global.cvat.server.about().then(result => {
-  console.log(result);
-}).catch(error => {
-  console.log(error);
-}); // TODO: Server proxy
+  global.cvat = Object.freeze(implementation(cvat));
+})(); // TODO: Server proxy
 // TODO: Plugins installation
 // TODO: exception class, objectstate class
 // TODO: Documentation with http://yui.github.io/yuidoc/syntax/index.html
@@ -332,7 +446,7 @@ global.cvat.server.about().then(result => {
 /* global
     global:false
 */
-{
+(() => {
   const plugins = [];
 
   class PluginRegistry {
@@ -367,16 +481,38 @@ global.cvat.server.about().then(result => {
       return plugins;
     }
 
-    static async init() {
-      global.cvat.plugins.list.implementation = PluginRegistry.list;
-      global.cvat.plugins.register.implementation = PluginRegistry.register;
+  }
+
+  module.exports = PluginRegistry;
+})();
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../node_modules/webpack/buildin/global.js */ "./node_modules/webpack/buildin/global.js")))
+
+/***/ }),
+
+/***/ "./babel.build/user.js":
+/*!*****************************!*\
+  !*** ./babel.build/user.js ***!
+  \*****************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+/*
+* Copyright (C) 2018 Intel Corporation
+* SPDX-License-Identifier: MIT
+*/
+(() => {
+  class User {
+    constructor() {
+      this.annotations = {};
     }
 
   }
 
-  module.exports = PluginRegistry;
-}
-/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../node_modules/webpack/buildin/global.js */ "./node_modules/webpack/buildin/global.js")))
+  module.exports = User;
+})();
 
 /***/ }),
 

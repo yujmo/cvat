@@ -7,7 +7,7 @@
     global:false
 */
 
-{
+(() => {
     const plugins = [];
     class PluginRegistry {
         static async apiWrapper(wrappedFunc, ...args) {
@@ -40,12 +40,7 @@
         static async list() {
             return plugins;
         }
-
-        static async init() {
-            global.cvat.plugins.list.implementation = PluginRegistry.list;
-            global.cvat.plugins.register.implementation = PluginRegistry.register;
-        }
     }
 
     module.exports = PluginRegistry;
-}
+})();

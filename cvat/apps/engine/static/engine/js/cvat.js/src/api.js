@@ -8,7 +8,7 @@
     global:false
 */
 
-{
+(() => {
     const PluginRegistry = require('./plugins');
 
     const annotationsModule = {
@@ -213,20 +213,9 @@
     cvat.Job = Object.freeze(cvat.Job);
     cvat.Task = Object.freeze(cvat.Task);
 
-    global.cvat = Object.freeze(cvat);
-    PluginRegistry.init();
-}
-
-global.cvat.server.about.implementation = async () => {
-    return 'Hello world';
-};
-
-global.cvat.server.about().then((result) => {
-    console.log(result);
-}).catch((error) => {
-    console.log(error);
-});
-
+    const implementation = require('./api-implementation');
+    global.cvat = Object.freeze(implementation(cvat));
+})();
 
 // TODO: Server proxy
 // TODO: Plugins installation
