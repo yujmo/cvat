@@ -14,6 +14,7 @@ from distutils.util import strtobool
 from xml.sax.saxutils import XMLGenerator
 from abc import ABCMeta, abstractmethod
 from PIL import Image
+from shapely import geometry
 
 import django_rq
 from django.conf import settings
@@ -141,6 +142,43 @@ def bulk_create(db_model, objects, flt_param = {}):
 
     return []
 
+def _merge_table_rows(rows, keys_for_merge, field_id):
+    """dot.notation access to dictionary attributes"""
+    from collections import OrderedDict
+    class dotdict(OrderedDict):
+        __getattr__ = OrderedDict.get
+        __setattr__ = OrderedDict.__setitem__
+        __delattr__ = OrderedDict.__delitem__
+        __eq__ = lambda self, other: self.id == other.id
+        __hash__ = lambda self: self.id
+
+    # It is necessary to keep a stable order of original rows
+    # (e.g. for tracked boxes). Otherwise prev_box.frame can be bigger
+    # than next_box.frame.
+    merged_rows = OrderedDict()
+
+    # Group all rows by field_id. In grouped rows replace fields in
+    # accordance with keys_for_merge structure.
+    for row in rows:
+        row_id = row[field_id]
+        if not row_id in merged_rows:
+            merged_rows[row_id] = dotdict(row)
+            for key in keys_for_merge:
+                merged_rows[row_id][key] = []
+
+        for key in keys_for_merge:
+            item = dotdict({v.split('__', 1)[-1]:row[v] for v in keys_for_merge[key]})
+            if item.id:
+                merged_rows[row_id][key].append(item)
+
+    # Remove redundant keys from final objects
+    redundant_keys = [item for values in keys_for_merge.values() for item in values]
+    for i in merged_rows:
+        for j in redundant_keys:
+            del merged_rows[i][j]
+
+    return list(merged_rows.values())
+
 class JobAnnotation:
     def __init__(self, pk):
         self.db_job = models.Job.objects.select_related('segment__task') \
@@ -174,13 +212,13 @@ class JobAnnotation:
         db_shape_attrvals = []
 
         for track in tracks:
-            attributes = track.pop("attributes", [])
+            track_attributes = track.pop("attributes", [])
             shapes = track.pop("shapes")
             db_track = models.LabeledTrack(job=self.db_job, **track)
             if db_track.label_id not in self.db_labels:
                 raise AttributeError("label_id `{}` is invalid".format(db_track.label_id))
 
-            for attr in attributes:
+            for attr in track_attributes:
                 db_attrval = models.LabeledTrackAttributeVal(**attr)
                 if db_attrval.spec_id not in self.db_attributes:
                     raise AttributeError("spec_id `{}` is invalid".format(db_attrval.spec_id))
@@ -188,12 +226,12 @@ class JobAnnotation:
                 db_track_attrvals.append(db_attrval)
 
             for shape in shapes:
-                attributes = shape.pop("attributes", [])
+                shape_attributes = shape.pop("attributes", [])
 
                 db_shape = models.TrackedShape(**shape)
                 db_shape.track_id = len(db_tracks)
 
-                for attr in attributes:
+                for attr in shape_attributes:
                     db_attrval = models.TrackedShapeAttributeVal(**attr)
                     if db_attrval.spec_id not in self.db_attributes:
                         raise AttributeError("spec_id `{}` is invalid".format(db_attrval.spec_id))
@@ -201,8 +239,11 @@ class JobAnnotation:
                     db_shape_attrvals.append(db_attrval)
 
                 db_shapes.append(db_shape)
+                shape["attributes"] = shape_attributes
 
             db_tracks.append(db_track)
+            track["attributes"] = track_attributes
+            track["shapes"] = shapes
 
         db_tracks = bulk_create(models.LabeledTrack, db_tracks,
             {"job_id": self.db_job.id})
@@ -222,16 +263,14 @@ class JobAnnotation:
 
         bulk_create(models.TrackedShapeAttributeVal, db_shape_attrvals)
 
-        db_tracks = models.LabeledTrack.objects.filter(
-            id__in=[obj.id for obj in db_tracks],
-        ).prefetch_related(
-            "label",
-            "labeledtrackattributeval_set",
-            "trackedshape_set__trackedshapeattributeval_set",
-        )
+        shape_idx = 0
+        for track, db_track in zip(tracks, db_tracks):
+            track["id"] = db_track.id
+            for shape in track["shapes"]:
+                shape["id"] = db_shapes[shape_idx].id
+                shape_idx += 1
 
-        tracks = serializers.LabeledTrackSerializer(db_tracks, many=True)
-        self.data["tracks"] = tracks.data
+        self.data["tracks"] = tracks
 
     def _save_shapes_to_db(self, shapes):
         db_shapes = []
@@ -251,6 +290,7 @@ class JobAnnotation:
                 db_attrvals.append(db_attrval)
 
             db_shapes.append(db_shape)
+            shape["attributes"] = attributes
 
         db_shapes = bulk_create(models.LabeledShape, db_shapes,
             {"job_id": self.db_job.id})
@@ -260,15 +300,10 @@ class JobAnnotation:
 
         bulk_create(models.LabeledShapeAttributeVal, db_attrvals)
 
-        db_shapes = models.LabeledShape.objects.filter(
-            id__in=[obj.id for obj in db_shapes],
-        ).prefetch_related(
-            "label",
-            "labeledshapeattributeval_set",
-        )
+        for shape, db_shape in zip(shapes, db_shapes):
+            shape["id"] = db_shape.id
 
-        shapes = serializers.LabeledShapeSerializer(db_shapes, many=True)
-        self.data["shapes"] = shapes.data
+        self.data["shapes"] = shapes
 
     def _save_tags_to_db(self, tags):
         db_tags = []
@@ -288,6 +323,7 @@ class JobAnnotation:
                 db_attrvals.append(db_attrval)
 
             db_tags.append(db_tag)
+            tag["attributes"] = attributes
 
         db_tags = bulk_create(models.LabeledImage, db_tags,
             {"job_id": self.db_job.id})
@@ -297,15 +333,10 @@ class JobAnnotation:
 
         bulk_create(models.LabeledImageAttributeVal, db_attrvals)
 
-        db_tags = models.LabeledImage.objects.filter(
-            id__in=[obj.id for obj in db_tags]
-        ).prefetch_related(
-            "label",
-            "labeledimageattributeval_set",
-        )
+        for tag, db_tag in zip(tags, db_tags):
+            tag["id"] = db_tag.id
 
-        tags = serializers.LabeledImageSerializer(db_tags, many=True)
-        self.data["tags"] = tags.data
+        self.data["tags"] = tags
 
     def _save_to_db(self, data):
         self.reset()
@@ -351,25 +382,131 @@ class JobAnnotation:
             labeledshape_set.delete()
             labeledtrack_set.delete()
 
+    def _init_tags_from_db(self):
+        db_tags = self.db_job.labeledimage_set.prefetch_related(
+            "label",
+            "labeledimageattributeval_set"
+        ).values(
+            'id',
+            'frame',
+            'label_id',
+            'group',
+            'labeledimageattributeval__spec_id',
+            'labeledimageattributeval__value',
+            'labeledimageattributeval__id',
+        )
+        db_tags = _merge_table_rows(
+            rows=db_tags,
+            keys_for_merge={
+                "labeledimageattributeval_set": [
+                    'labeledimageattributeval__spec_id',
+                    'labeledimageattributeval__value',
+                    'labeledimageattributeval__id',
+                ],
+            },
+            field_id='id',
+        )
+        serializer = serializers.LabeledImageSerializer(db_tags, many=True)
+        self.data["tags"] = serializer.data
+
+    def _init_shapes_from_db(self):
+        db_shapes = self.db_job.labeledshape_set.prefetch_related(
+            "label",
+            "labeledshapeattributeval_set"
+        ).values(
+            'id',
+            'label_id',
+            'type',
+            'frame',
+            'group',
+            'occluded',
+            'z_order',
+            'points',
+            'labeledshapeattributeval__spec_id',
+            'labeledshapeattributeval__value',
+            'labeledshapeattributeval__id',
+            )
+
+        db_shapes = _merge_table_rows(
+            rows=db_shapes,
+            keys_for_merge={
+                'labeledshapeattributeval_set': [
+                    'labeledshapeattributeval__spec_id',
+                    'labeledshapeattributeval__value',
+                    'labeledshapeattributeval__id',
+                ],
+            },
+            field_id='id',
+        )
+
+        serializer = serializers.LabeledShapeSerializer(db_shapes, many=True)
+        self.data["shapes"] = serializer.data
+
+    def _init_tracks_from_db(self):
+        db_tracks = self.db_job.labeledtrack_set.prefetch_related(
+            "label",
+            "labeledtrackattributeval_set",
+            "trackedshape_set__trackedshapeattributeval_set"
+        ).values(
+            "id",
+            "frame",
+            "label_id",
+            "group",
+            "labeledtrackattributeval__spec_id",
+            "labeledtrackattributeval__value",
+            "labeledtrackattributeval__id",
+            "trackedshape__type",
+            "trackedshape__occluded",
+            "trackedshape__z_order",
+            "trackedshape__points",
+            "trackedshape__id",
+            "trackedshape__frame",
+            "trackedshape__outside",
+            "trackedshape__trackedshapeattributeval__spec_id",
+            "trackedshape__trackedshapeattributeval__value",
+            "trackedshape__trackedshapeattributeval__id",
+        )
+
+        db_tracks = _merge_table_rows(
+            rows=db_tracks,
+            keys_for_merge={
+                "labeledtrackattributeval_set": [
+                    "labeledtrackattributeval__spec_id",
+                    "labeledtrackattributeval__value",
+                    "labeledtrackattributeval__id",
+                ],
+                "trackedshape_set":[
+                    "trackedshape__type",
+                    "trackedshape__occluded",
+                    "trackedshape__z_order",
+                    "trackedshape__points",
+                    "trackedshape__id",
+                    "trackedshape__frame",
+                    "trackedshape__outside",
+                    "trackedshape__trackedshapeattributeval__spec_id",
+                    "trackedshape__trackedshapeattributeval__value",
+                    "trackedshape__trackedshapeattributeval__id",
+                ],
+            },
+            field_id="id",
+        )
+
+        for db_track in db_tracks:
+            db_track["trackedshape_set"] = _merge_table_rows(db_track["trackedshape_set"], {
+                'trackedshapeattributeval_set': [
+                    'trackedshapeattributeval__value',
+                    'trackedshapeattributeval__spec_id',
+                    'trackedshapeattributeval__id',
+                ]
+            }, 'id')
+
+        serializer = serializers.LabeledTrackSerializer(db_tracks, many=True)
+        self.data["tracks"] = serializer.data
+
     def init_from_db(self):
-        db_tags = list(self.db_job.labeledimage_set
-            .prefetch_related("label")
-            .prefetch_related("labeledimageattributeval_set"))
-        tags = serializers.LabeledImageSerializer(db_tags, many=True)
-        self.data["tags"] = tags.data
-
-        db_shapes = list(self.db_job.labeledshape_set
-            .prefetch_related("label")
-            .prefetch_related("labeledshapeattributeval_set"))
-        shapes = serializers.LabeledShapeSerializer(db_shapes, many=True)
-        self.data["shapes"] = shapes.data
-
-        db_tracks = list(self.db_job.labeledtrack_set
-            .select_related("label")
-            .prefetch_related("labeledtrackattributeval_set")
-            .prefetch_related("trackedshape_set__trackedshapeattributeval_set"))
-        tracks = serializers.LabeledTrackSerializer(db_tracks, many=True)
-        self.data["tracks"] = tracks.data
+        self._init_tags_from_db()
+        self._init_shapes_from_db()
+        self._init_tracks_from_db()
 
 class AnnotationWriter:
     __metaclass__ = ABCMeta
@@ -567,11 +704,55 @@ class XmlAnnotationWriter(AnnotationWriter):
         self.xmlgen.endElement("annotations")
         self.xmlgen.endDocument()
 
+def _calc_shape_area(shape):
+    return shape.area
+
+def _calc_overlap_shape_area(shape0, shape1):
+    shape = shape0.intersection(shape1)
+    return shape.area
+
+def _calc_similarity(p0, p1):
+    overlap_area = _calc_overlap_shape_area(p0, p1)
+    shape0_area = _calc_shape_area(p0)
+    shape1_area = _calc_shape_area(p1)
+
+    return overlap_area / (shape0_area + shape1_area - overlap_area)
+
+def _pairwise(iterable):
+    a = iter(iterable)
+    return zip(a, a)
+
+def _calc_shapes_similarity(shape0, shape1):
+    if shape0["type"] == shape1["type"]:
+        if shape0["type"] == models.ShapeType.RECTANGLE:
+            p0 = geometry.box(*shape0["points"])
+            p1 = geometry.box(*shape1["points"])
+
+            return _calc_similarity(p0, p1)
+        elif shape0["type"] == models.ShapeType.POLYGON:
+            p0 = geometry.Polygon(_pairwise(shape0["points"]))
+            p1 = geometry.Polygon(_pairwise(shape0["points"]))
+
+            return _calc_similarity(p0, p1)
+        else:
+            return 0 # FIXME: need some similarity for points and polylines
+    return 0
+
+def _calc_avg_shape(shape0, shape1):
+    # FIXME: need to calculate an average shape here
+    if shape0["type"] == shape1["type"]:
+        if shape0["type"] == models.ShapeType.RECTANGLE:
+            return shape0
+        elif shape0["type"] == models.ShapeType.POLYGON:
+            return shape0
+        else:
+            return shape0
 
 class TaskAnnotation:
     def __init__(self, pk):
         self.db_task = models.Task.objects.get(id=pk)
         self.db_jobs = models.Job.objects.select_related("segment").filter(segment__task_id=pk)
+        self.reset()
 
     def reset(self):
         self.data = {
@@ -582,7 +763,6 @@ class TaskAnnotation:
         }
 
     def _patch_data(self, data, action):
-        self.reset()
         splitted_data = {}
         jobs = {}
         for db_job in self.db_jobs:
@@ -620,7 +800,6 @@ class TaskAnnotation:
         if data:
             self._patch_data(data, PatchAction.DELETE)
         else:
-            self.reset()
             for db_job in self.db_jobs:
                 delete_job_data(db_job.id)
 
@@ -645,8 +824,74 @@ class TaskAnnotation:
         self.data["tags"].extend(tags)
 
     def _merge_shapes(self, shapes, start_frame, overlap):
-        # FIXME: implement merge algorithm here
-        self.data["shapes"].extend(shapes)
+        # 1. Split shapes on two parts: new and which can be intersected
+        # with existing boxes.
+        new_shapes = [shape for shape in shapes
+            if shape["frame"] >= start_frame + overlap]
+        int_shapes = [shape for shape in shapes
+            if shape["frame"] < start_frame + overlap]
+        assert len(new_shapes) + len(int_shapes) == len(shapes)
+
+        # 2. Convert to more convenient data structure (shapes by frame)
+        int_shapes_by_frame = {}
+        for shape in int_shapes:
+            if shape["frame"] in int_shapes_by_frame:
+                int_shapes_by_frame[shape["frame"]].append(shape)
+            else:
+                int_shapes_by_frame[shape["frame"]] = [shape]
+
+        old_shapes_by_frame = {}
+        for shape in self.data["shapes"]:
+            if shape["frame"] >= start_frame:
+                if shape["frame"] in old_shapes_by_frame:
+                    old_shapes_by_frame[shape["frame"]].append(shape)
+                else:
+                    old_shapes_by_frame[shape["frame"]] = [shape]
+
+        # 3. Add new shapes as is. It should be done only after old_shapes_by_frame
+        # variable is initialized.
+        self.data["shapes"].extend(new_shapes)
+
+        # Nothing to merge here. Just add all int_shapes if any.
+        if not old_shapes_by_frame or not int_shapes_by_frame:
+            self.data["shapes"].extend(int_shapes)
+            return
+
+        # 4. Build cost matrix for each frame and find correspondence using
+        # Hungarian algorithm. In this case min_cost_thresh is stronger
+        # because we compare only on one frame.
+        min_cost_thresh = 0.25
+        for frame in int_shapes_by_frame:
+            if frame in old_shapes_by_frame:
+                int_shapes = int_shapes_by_frame[frame]
+                old_shapes = old_shapes_by_frame[frame]
+                cost_matrix = np.empty(shape=(len(int_shapes), len(old_shapes)),
+                    dtype=float)
+                # 5.1 Construct cost matrix for the frame.
+                for i, shape0 in enumerate(int_shapes):
+                    for j, shape1 in enumerate(old_shapes):
+                        if shape0["label_id"] == shape1["label_id"]:
+                            cost_matrix[i][j] = 1 - _calc_shapes_similarity(shape0, shape1)
+                        else:
+                            cost_matrix[i][j] = 1
+
+                # 6. Find optimal solution using Hungarian algorithm.
+                row_ind, col_ind = linear_sum_assignment(cost_matrix)
+                int_shapes_indexes = list(range(0, len(int_shapes)))
+                for i, j in zip(row_ind, col_ind):
+                    # Reject the solution if the cost is too high. Remember
+                    # inside int_boxes_indexes boxes which were handled.
+                    if cost_matrix[i][j] <= min_cost_thresh:
+                        old_shapes[j] = _calc_avg_shape(old_shapes[j], int_shapes[i])
+                        int_shapes_indexes[i] = -1
+
+                # 7. Add all boxes which were not processed.
+                for i in int_shapes_indexes:
+                    if i != -1:
+                        self.data["shapes"].append(int_shapes[i])
+            else:
+                # We don't have old boxes on the frame. Let's add all new ones.
+                self.data["shapes"].extend(int_shapes_by_frame[frame])
 
     def _merge_tracks(self, tracks, start_frame, overlap):
         # FIXME: implement merge algorithm here
@@ -675,7 +920,7 @@ class TaskAnnotation:
         db_task = self.db_task
         db_segments = db_task.segment_set.all().prefetch_related('job_set')
         db_labels = db_task.label_set.all().prefetch_related('attributespec_set')
-        im_meta_data = get_image_meta_cache(db_task)
+        im_meta_data = get_image_meta_cache(db_task)['original_size']
 
         meta = OrderedDict([
             ("task", OrderedDict([

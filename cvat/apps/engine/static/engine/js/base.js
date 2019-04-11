@@ -127,12 +127,32 @@ function showOverlay(message) {
     return overlayWindow[0];
 }
 
+async function dumpAnnotationRequest(tid, taskName) {
+    const name = encodeURIComponent(`${tid}_${taskName}`);
+    return new Promise((resolve, reject) => {
+        const url = `/api/v1/tasks/${tid}/annotations/${name}`;
+        async function request() {
+            $.get(url)
+                .done((...args) => {
+                    if (args[2].status === 202) {
+                        setTimeout(request, 3000);
+                    } else {
+                        const a = document.createElement('a');
+                        a.href = `${url}?action=download`;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        resolve();
+                    }
+                }).fail((errorData) => {
+                    const message = `Can not dump annotations for the task. Code: ${errorData.status}. `
+                        + `Message: ${errorData.responseText || errorData.statusText}`;
+                    reject(new Error(message));
+                });
+        }
 
-async function dumpAnnotationRequest(dumpButton, tid) {
-    dumpButton = $(dumpButton);
-    dumpButton.attr('disabled', true);
-
-    // TODO
+        setTimeout(request);
+    });
 }
 
 

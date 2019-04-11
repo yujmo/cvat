@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 import os
+import re
 import json
 import traceback
 from ast import literal_eval
@@ -245,38 +246,47 @@ class TaskViewSet(auth.TaskGetQuerySetMixin, viewsets.ModelViewSet):
                 return Response(data)
 
     @action(detail=True, methods=['GET'], serializer_class=None,
-        url_path='annotations/(?P<filename>[-\w]+)')
+        url_path='annotations/(?P<filename>[^/]+)')
     def dump(self, request, pk, filename):
+        filename = re.sub(r'[\\/*?:"<>|]', '_', filename)
         queue = django_rq.get_queue("default")
         username = request.user.username
         db_task = self.get_object()
         timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
         file_ext = request.query_params.get("format", "xml")
-        file_path = os.path.join(db_task.get_task_dirname(),
-            filename + ".{}.{}.".format(username, timestamp) + "dump")
+        action = request.query_params.get("action")
+        if action not in [None, "download"]:
+            raise serializers.ValidationError(
+                "Please specify a correct 'action' for the request")
 
-        # FIXME: Cleanup (remove old dump files)
-        # good_files = [rq_job.meta["file_path"] for rq_job in queue.get_jobs()
-        #     if "file_path" in rq_job.meta]
-        # glob_files = glob.glob(os.path.join(db_task.get_task_dirname(), "*.dump"))
-        # for f in set(glob_files) - set(good_files):
-        #     os.remove(f)
+        file_path = os.path.join(db_task.get_task_dirname(),
+            filename + ".{}.{}.".format(username, timestamp) + "xml")
 
         rq_id = "{}@/api/v1/jobs/{}/annotations/{}".format(username, pk, filename)
         rq_job = queue.fetch_job(rq_id)
 
         if rq_job:
             if rq_job.is_finished:
-                if not rq_job.meta.get(rq_id):
-                    rq_job.meta[rq_id] = True
-                    rq_job.save_meta()
-                    return sendfile(request, rq_job.meta["file_path"], attachment=True,
-                        attachment_filename=filename + "." + file_ext)
+                if not rq_job.meta.get("download"):
+                    if action == "download":
+                        rq_job.meta[action] = True
+                        rq_job.save_meta()
+                        return sendfile(request, rq_job.meta["file_path"], attachment=True,
+                            attachment_filename=filename + "." + file_ext)
+                    else:
+                        return Response(status=status.HTTP_201_CREATED)
+                else: # Remove the old dump file
+                    try:
+                        os.remove(rq_job.meta["file_path"])
+                    except OSError:
+                        pass
+                    finally:
+                        rq_job.delete()
             elif rq_job.is_failed:
                 rq_job.delete()
                 return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             else:
-                return Response(status=status.HTTP_100_CONTINUE)
+                return Response(status=status.HTTP_202_ACCEPTED)
 
         rq_job = queue.enqueue_call(func=annotation_v2.dump_task_data,
             args=(pk, file_path, request.scheme, request.get_host(),
@@ -285,7 +295,7 @@ class TaskViewSet(auth.TaskGetQuerySetMixin, viewsets.ModelViewSet):
         rq_job.meta["file_path"] = file_path
         rq_job.save_meta()
 
-        return Response(status=status.HTTP_100_CONTINUE)
+        return Response(status=status.HTTP_202_ACCEPTED)
 
     @action(detail=True, methods=['GET'], serializer_class=RqStatusSerializer)
     def status(self, request, pk):
@@ -367,9 +377,7 @@ class JobViewSet(viewsets.GenericViewSet,
     def annotations(self, request, pk):
         if request.method == 'GET':
             data = annotation_v2.get_job_data(pk)
-            serializer = LabeledDataSerializer(data=data)
-            if serializer.is_valid(raise_exception=True):
-                return Response(serializer.data)
+            return Response(data)
         elif request.method == 'PUT':
             serializer = LabeledDataSerializer(data=request.data)
             if serializer.is_valid(raise_exception=True):
