@@ -3,14 +3,30 @@
 * SPDX-License-Identifier: MIT
 */
 
+/* global
+    global:false
+*/
+
 (() => {
     class FrameData {
-        constructor() {
-            this.a = 5;
-        }
-
-        f() {
-
+        constructor(tid, number) {
+            Object.defineProperties(this, {
+                width: {
+                    value: 1024,
+                    writable: false,
+                },
+                height: {
+                    value: 768,
+                    writable: false,
+                },
+                async image() {
+                    const { api } = global.cvat.config;
+                    const { host } = global.cvat.config;
+                    return new Promise((resolve) => {
+                        resolve(`${host}/api/${api}/tasks/${tid}/frames/${number}`);
+                    });
+                },
+            });
         }
     }
 

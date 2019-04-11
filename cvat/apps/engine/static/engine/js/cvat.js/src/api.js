@@ -219,5 +219,4 @@
 
 // TODO: Server proxy
 // TODO: Plugins installation
-// TODO: exception class, objectstate class
 // TODO: Documentation with http://yui.github.io/yuidoc/syntax/index.html

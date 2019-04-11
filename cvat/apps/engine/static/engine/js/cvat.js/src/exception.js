@@ -8,11 +8,11 @@
     class Exception extends Error {
         constructor(...args) {
             super(...args);
-            this.a = null;
+            this.details = null;
         }
 
         async save() {
-            this.a = null;
+            this.details = null;
         }
     }
 
