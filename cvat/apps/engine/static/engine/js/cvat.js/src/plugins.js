@@ -20,7 +20,7 @@
                 }
             }
 
-            let result = await wrappedFunc.implementation(...args);
+            let result = await wrappedFunc.implementation.call(this, ...args);
 
             for (const plugin of pluginList) {
                 const pluginDecorators = plugin.functions

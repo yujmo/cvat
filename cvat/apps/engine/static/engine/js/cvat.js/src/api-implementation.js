@@ -70,7 +70,7 @@
         };
 
         function checkContext(wrappedFunction) {
-            return async (...args) => {
+            return async function wrapper(...args) {
                 if (!(this instanceof Base)) {
                     throw new Exception('Bad context for the function');
                 }

@@ -26,7 +26,7 @@
 
         async clear() {
             const result = await PluginRegistry
-                .apiWrapper(annotationsModule.clear);
+                .apiWrapper.call(this, annotationsModule.clear);
             return result;
         },
 
