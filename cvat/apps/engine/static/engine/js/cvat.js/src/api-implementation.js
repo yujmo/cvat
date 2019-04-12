@@ -14,8 +14,7 @@
     const Exception = require('./exception');
     const Statistics = require('./statistics');
     const FrameData = require('./frames');
-    const { Task, Job } = require('./annotations');
-
+    const { Base, Task, Job } = require('./annotations');
 
     function implement(cvat) {
         cvat.plugins.list.implementation = PluginRegistry.list;
@@ -37,7 +36,7 @@
             };
         };
 
-        cvat.server.about.share.implementation = async (directory) => {
+        cvat.server.share.implementation = async (directory) => {
             return [
                 {
                     name: 'file_1',
@@ -59,156 +58,131 @@
         };
 
         cvat.tasks.get.implementation = async (filter) => {
-            return new Task();
+            return [new Task()];
         };
 
         cvat.jobs.get.implementation = async (filter) => {
-            return new Job();
+            return [new Job()];
         };
 
         cvat.users.get.implementation = async (filter) => {
-            return new User();
+            return [new User()];
         };
 
-        cvat.Task.annotations.upload.implementation = async (file) => {
-            if (this === global) {
-                throw new Exception('Invoking without context is not allowed');
+        function checkContext(wrappedFunction) {
+            return async (...args) => {
+                if (!(this instanceof Base)) {
+                    throw new Exception('Bad context for the function');
+                }
+                const result = await wrappedFunction.call(this, ...args);
+                return result;
+            };
+        }
+
+        cvat.Task.annotations.upload.implementation = checkContext(
+            async (file) => {
+                // TODO: Update annotations
+            },
+        );
+
+        cvat.Task.annotations.save.implementation = checkContext(
+            async () => {
+                // TODO: Save annotation on a server
+            },
+        );
+
+        cvat.Task.annotations.clear.implementation = checkContext(
+            async () => {
+                // TODO: Remove all annotations
+            },
+        );
+
+        cvat.Task.annotations.dump.implementation = checkContext(
+            async () => {
+                const { host } = global.cvat.config;
+                const { api } = global.cvat.config;
+
+                return `${host}/api/${api}/tasks/${this.taskID}/annotations/dump`;
+            },
+        );
+
+        cvat.Task.annotations.statistics.implementation = checkContext(
+            async () => {
+                return new Statistics();
+            },
+        );
+
+        cvat.Task.annotations.put.implementation = checkContext(
+            async (arrayOfObjects) => {
+                // TODO: Make from objects
+            },
+        );
+
+        cvat.Task.annotations.get.implementation = checkContext(
+            async (frame, filter) => {
+                // TODO: Return collection
+            },
+        );
+
+        cvat.Task.annotations.search.implementation = checkContext(
+            async (filter, frameFrom, frameTo) => {
+                return 0;
+            },
+        );
+
+        cvat.Task.annotations.select.implementation = checkContext(
+            async (frame, x, y) => {
+                return null;
+            },
+        );
+
+        cvat.Task.frames.get.implementation = checkContext(
+            async (frame) => {
+                return new FrameData(this.taskID, frame);
+            },
+        );
+
+        cvat.Task.logs.put.implementation = checkContext(
+            async (logType, details) => {
+                // TODO: Put log into collection
+            },
+        );
+
+        cvat.Task.logs.save.implementation = checkContext(
+            async () => {
+
+            },
+        );
+
+        cvat.Task.actions.undo.implementation = checkContext(
+            async (count) => {
+                // TODO: Undo
+            },
+        );
+
+        cvat.Task.actions.redo.implementation = checkContext(
+            async (count) => {
+                // TODO: Redo
+            },
+        );
+
+        cvat.Task.actions.clear.implementation = checkContext(
+            async () => {
+                // TODO: clear
+            },
+        );
+
+        cvat.Task.events.subscribe.implementation = checkContext(
+            async (type, callback) => {
+                // TODO: Subscribe
             }
+        );
 
-            // TODO: Update annotations
-        };
-
-        cvat.Task.annotations.save.implementation = async () => {
-            if (this === global) {
-                throw new Exception('Invoking without context is not allowed');
-            }
-
-            // TODO: Save annotation on a server
-        };
-
-        cvat.Task.annotations.clear.implementation = async () => {
-            if (this === global) {
-                throw new Exception('Invoking without context is not allowed');
-            }
-
-            // TODO: Remove all annotations
-        };
-
-        cvat.Task.annotations.dump.implementation = async () => {
-            if (this === global) {
-                throw new Exception('Invoking without context is not allowed');
-            }
-
-            const { host } = global.cvat.config;
-            const { api } = global.cvat.config;
-
-            return `${host}/api/${api}/tasks/${this.taskID}/annotations/dump`;
-        };
-
-        cvat.Task.annotations.statistics.implementation = async () => {
-            if (this === global) {
-                throw new Exception('Invoking without context is not allowed');
-            }
-
-            return new Statistics();
-        };
-
-        cvat.Task.annotations.put.implementation = async (arrayOfObjects) => {
-            if (this === global) {
-                throw new Exception('Invoking without context is not allowed');
-            }
-
-            // TODO: Make from objects
-        };
-
-        cvat.Task.annotations.get.implementation = async (frame, filter) => {
-            if (this === global) {
-                throw new Exception('Invoking without context is not allowed');
-            }
-
-            // TODO: Return collection
-        };
-
-        cvat.Task.annotations.search.implementation = async (filter, frameFrom, frameTo) => {
-            if (this === global) {
-                throw new Exception('Invoking without context is not allowed');
-            }
-
-            return 0;
-        };
-
-        cvat.Task.annotations.select.implementation = async (frame, x, y) => {
-            if (this === global) {
-                throw new Exception('Invoking without context is not allowed');
-            }
-
-            // TODO: Return random ID from collection
-            return null;
-        };
-
-        cvat.Task.frames.get.implementation = async (frame) => {
-            if (this === global) {
-                throw new Exception('Invoking without context is not allowed');
-            }
-
-            return new FrameData(this.taskID, frame);
-        };
-
-        cvat.Task.logs.put.implementation = async (logType, details) => {
-            if (this === global) {
-                throw new Exception('Invoking without context is not allowed');
-            }
-
-            // TODO: Put log into collection
-        };
-
-        cvat.Task.logs.save.implementation = async () => {
-            if (this === global) {
-                throw new Exception('Invoking without context is not allowed');
-            }
-
-            // TODO: Save log collection
-        };
-
-        cvat.Task.actions.save.undo = async (count) => {
-            if (this === global) {
-                throw new Exception('Invoking without context is not allowed');
-            }
-
-            // TODO: Save log collection
-        };
-
-        cvat.Task.actions.save.redo = async (count) => {
-            if (this === global) {
-                throw new Exception('Invoking without context is not allowed');
-            }
-
-            // TODO: Save log collection
-        };
-
-        cvat.Task.actions.save.clear = async () => {
-            if (this === global) {
-                throw new Exception('Invoking without context is not allowed');
-            }
-
-            // TODO: Save log collection
-        };
-
-        cvat.Task.events.subscribe.implementation = async (type, callback) => {
-            if (this === global) {
-                throw new Exception('Invoking without context is not allowed');
-            }
-
-            // TODO: Save log collection
-        };
-
-        cvat.Task.events.unsubscribe.implementation = async (type, callback) => {
-            if (this === global) {
-                throw new Exception('Invoking without context is not allowed');
-            }
-
-            // TODO: Save log collection
-        };
+        cvat.Task.events.unsubscribe.implementation = checkContext(
+            async (type, callback) => {
+                // TODO: Save log collection
+            },
+        );
 
         return cvat;
     }

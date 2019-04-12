@@ -94,16 +94,52 @@
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
-
+/* WEBPACK VAR INJECTION */(function(global) {
 
 /*
 * Copyright (C) 2018 Intel Corporation
 * SPDX-License-Identifier: MIT
 */
+
+/* global
+    global:false
+    require:false
+*/
 (() => {
+  const {
+    Attribute,
+    Label
+  } = __webpack_require__(/*! ./labels */ "./babel.build/labels.js");
+
   class Base {
     constructor() {
-      this.annotations = {};
+      this.annotations = {
+        upload: global.cvat.Task.annotations.upload.bind(this),
+        save: global.cvat.Task.annotations.save.bind(this),
+        clear: global.cvat.Task.annotations.clear.bind(this),
+        dump: global.cvat.Task.annotations.dump.bind(this),
+        statistics: global.cvat.Task.annotations.statistics.bind(this),
+        put: global.cvat.Task.annotations.put.bind(this),
+        get: global.cvat.Task.annotations.get.bind(this),
+        search: global.cvat.Task.annotations.search.bind(this),
+        select: global.cvat.Task.annotations.select.bind(this)
+      };
+      this.frames = {
+        get: global.cvat.Task.frames.get.bind(this)
+      };
+      this.logs = {
+        put: global.cvat.Task.logs.put.bind(this),
+        save: global.cvat.Task.logs.save.bind(this)
+      };
+      this.actions = {
+        undo: global.cvat.Task.actions.undo.bind(this),
+        redo: global.cvat.Task.actions.redo.bind(this),
+        clear: global.cvat.Task.actions.clear.bind(this)
+      };
+      this.events = {
+        subscribe: global.cvat.Task.events.subscribe.bind(this),
+        unsubscribe: global.cvat.Task.events.unsubscribe.bind(this)
+      };
     }
 
   }
@@ -129,6 +165,7 @@
     Job
   };
 })();
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../node_modules/webpack/buildin/global.js */ "./node_modules/webpack/buildin/global.js")))
 
 /***/ }),
 
@@ -140,7 +177,7 @@
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
-
+/* WEBPACK VAR INJECTION */(function(global) {
 
 /*
 * Copyright (C) 2018 Intel Corporation
@@ -149,13 +186,21 @@
 
 /* global
     require:false
+    global:false
 */
 (() => {
   const PluginRegistry = __webpack_require__(/*! ./plugins */ "./babel.build/plugins.js");
 
   const User = __webpack_require__(/*! ./user */ "./babel.build/user.js");
 
+  const Exception = __webpack_require__(/*! ./exception */ "./babel.build/exception.js");
+
+  const Statistics = __webpack_require__(/*! ./statistics */ "./babel.build/statistics.js");
+
+  const FrameData = __webpack_require__(/*! ./frames */ "./babel.build/frames.js");
+
   const {
+    Base,
     Task,
     Job
   } = __webpack_require__(/*! ./annotations */ "./babel.build/annotations.js");
@@ -172,7 +217,7 @@
       };
     };
 
-    cvat.server.about.share.implementation = async () => {
+    cvat.server.share.implementation = async directory => {
       return [{
         name: 'file_1',
         type: 'REG'
@@ -188,23 +233,77 @@
       }];
     };
 
-    cvat.tasks.get.implementation = async () => {
+    cvat.tasks.get.implementation = async filter => {
       return new Task();
     };
 
-    cvat.jobs.get.implementation = async () => {
+    cvat.jobs.get.implementation = async filter => {
       return new Job();
     };
 
-    cvat.users.get.implementation = async () => {
+    cvat.users.get.implementation = async filter => {
       return new User();
     };
 
+    async function checkContext(wrappedFunction, ...args) {
+      if (!(this instanceof Base)) {
+        throw new Exception('Bad context for the function');
+      }
+
+      const result = await wrappedFunction.call(this, args);
+      return result;
+    }
+
+    cvat.Task.annotations.upload.implementation = checkContext(async file => {// TODO: Update annotations
+    });
+    cvat.Task.annotations.save.implementation = checkContext(async () => {// TODO: Save annotation on a server
+    });
+    cvat.Task.annotations.clear.implementation = checkContext(async () => {// TODO: Remove all annotations
+    });
+    cvat.Task.annotations.dump.implementation = checkContext(async () => {
+      const {
+        host
+      } = global.cvat.config;
+      const {
+        api
+      } = global.cvat.config;
+      return `${host}/api/${api}/tasks/${this.taskID}/annotations/dump`;
+    });
+    cvat.Task.annotations.statistics.implementation = checkContext(async () => {
+      return new Statistics();
+    });
+    cvat.Task.annotations.put.implementation = checkContext(async arrayOfObjects => {// TODO: Make from objects
+    });
+    cvat.Task.annotations.get.implementation = checkContext(async (frame, filter) => {// TODO: Return collection
+    });
+    cvat.Task.annotations.search.implementation = checkContext(async (filter, frameFrom, frameTo) => {
+      return 0;
+    });
+    cvat.Task.annotations.select.implementation = checkContext(async (frame, x, y) => {
+      return null;
+    });
+    cvat.Task.frames.get.implementation = checkContext(async frame => {
+      return new FrameData(this.taskID, frame);
+    });
+    cvat.Task.logs.put.implementation = checkContext(async (logType, details) => {// TODO: Put log into collection
+    });
+    cvat.Task.logs.save.implementation = checkContext(async () => {});
+    cvat.Task.actions.undo.implementation = checkContext(async count => {// TODO: Undo
+    });
+    cvat.Task.actions.redo.implementation = checkContext(async count => {// TODO: Redo
+    });
+    cvat.Task.actions.clear.implementation = checkContext(async () => {// TODO: clear
+    });
+    cvat.Task.events.subscribe.implementation = checkContext(async (type, callback) => {// TODO: Subscribe
+    });
+    cvat.Task.events.unsubscribe.implementation = checkContext(async (type, callback) => {// TODO: Save log collection
+    });
     return cvat;
   }
 
   module.exports = implement;
 })();
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../node_modules/webpack/buildin/global.js */ "./node_modules/webpack/buildin/global.js")))
 
 /***/ }),
 
@@ -422,9 +521,131 @@
   global.cvat = Object.freeze(implementation(cvat));
 })(); // TODO: Server proxy
 // TODO: Plugins installation
-// TODO: exception class, objectstate class
 // TODO: Documentation with http://yui.github.io/yuidoc/syntax/index.html
 /* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../node_modules/webpack/buildin/global.js */ "./node_modules/webpack/buildin/global.js")))
+
+/***/ }),
+
+/***/ "./babel.build/exception.js":
+/*!**********************************!*\
+  !*** ./babel.build/exception.js ***!
+  \**********************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+/*
+* Copyright (C) 2018 Intel Corporation
+* SPDX-License-Identifier: MIT
+*/
+(() => {
+  class Exception extends Error {
+    constructor(...args) {
+      super(...args);
+      this.details = null;
+    }
+
+    async save() {
+      this.details = null;
+    }
+
+  }
+
+  module.exports = Exception;
+})();
+
+/***/ }),
+
+/***/ "./babel.build/frames.js":
+/*!*******************************!*\
+  !*** ./babel.build/frames.js ***!
+  \*******************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+/* WEBPACK VAR INJECTION */(function(global) {
+
+/*
+* Copyright (C) 2018 Intel Corporation
+* SPDX-License-Identifier: MIT
+*/
+
+/* global
+    global:false
+*/
+(() => {
+  class FrameData {
+    constructor(tid, number) {
+      Object.defineProperties(this, {
+        width: {
+          value: 1024,
+          writable: false
+        },
+        height: {
+          value: 768,
+          writable: false
+        },
+
+        async image() {
+          const {
+            api
+          } = global.cvat.config;
+          const {
+            host
+          } = global.cvat.config;
+          return new Promise(resolve => {
+            resolve(`${host}/api/${api}/tasks/${tid}/frames/${number}`);
+          });
+        }
+
+      });
+    }
+
+  }
+
+  module.exports = FrameData;
+})();
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../node_modules/webpack/buildin/global.js */ "./node_modules/webpack/buildin/global.js")))
+
+/***/ }),
+
+/***/ "./babel.build/labels.js":
+/*!*******************************!*\
+  !*** ./babel.build/labels.js ***!
+  \*******************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+/*
+* Copyright (C) 2018 Intel Corporation
+* SPDX-License-Identifier: MIT
+*/
+(() => {
+  class Attribute {
+    constructor() {
+      this.b = 5;
+    }
+
+  }
+
+  class Label {
+    constructor() {
+      this.a = 5;
+    }
+
+  }
+
+  module.exports = {
+    Attribute,
+    Label
+  };
+})();
 
 /***/ }),
 
@@ -486,6 +707,33 @@
   module.exports = PluginRegistry;
 })();
 /* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../node_modules/webpack/buildin/global.js */ "./node_modules/webpack/buildin/global.js")))
+
+/***/ }),
+
+/***/ "./babel.build/statistics.js":
+/*!***********************************!*\
+  !*** ./babel.build/statistics.js ***!
+  \***********************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+/*
+* Copyright (C) 2018 Intel Corporation
+* SPDX-License-Identifier: MIT
+*/
+(() => {
+  class Statistics {
+    constructor() {
+      this.details = null;
+    }
+
+  }
+
+  module.exports = Statistics;
+})();
 
 /***/ }),
 

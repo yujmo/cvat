@@ -217,6 +217,14 @@
     global.cvat = Object.freeze(implementation(cvat));
 })();
 
+async function test() {
+    const task = (await global.cvat.tasks.get())[0];
+    await task.annotations.clear();
+}
+
+test();
+
+
 // TODO: Server proxy
 // TODO: Plugins installation
 // TODO: Documentation with http://yui.github.io/yuidoc/syntax/index.html
