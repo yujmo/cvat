@@ -1,7 +1,7 @@
 {
-  "name": "cvat",
+  "name": "cvat.js",
   "version": "1.0.0",
-  "description": "",
+  "description": "Part of Computer Vision Tool which presents an interface for client-side integration",
   "main": "babel.config.js",
   "scripts": {
     "babel": "mkdir babel.build -p && babel src -d babel.build",
@@ -11,8 +11,8 @@
     "debug": "node --nolazy --inspect-brk=9230 src/api.js",
     "docs": "yuidoc ."
   },
-  "author": "",
-  "license": "ISC",
+  "author": "Intel",
+  "license": "MIT",
   "devDependencies": {
     "@babel/cli": "^7.4.3",
     "@babel/core": "^7.4.3",
