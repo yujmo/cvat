@@ -63,7 +63,7 @@
         };
 
         cvat.jobs.get.implementation = async (filter) => {
-            return [new Job()];
+            return [new Job({})];
         };
 
         cvat.users.get.implementation = async (filter) => {

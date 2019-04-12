@@ -219,6 +219,11 @@
 
 async function test() {
     const task = (await global.cvat.tasks.get())[0];
+    const job = (await global.cvat.jobs.get())[0];
+    const user = (await global.cvat.users.get())[0];
+    console.log(task);
+    console.log(job);
+    console.log(user);
     console.log(await task.annotations.upload());
     console.log(await task.annotations.save());
     console.log(await task.annotations.clear());

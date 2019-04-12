@@ -65,7 +65,7 @@
                         this[property] = initialData[property];
                     }
                     if (this[property] === null) {
-                        throw Exception('Some fields in job is not initialized');
+                        throw new Exception('Some fields in job is not initialized');
                     }
                 }
             }
