@@ -111,6 +111,8 @@
     Label
   } = __webpack_require__(/*! ./labels */ "./babel.build/labels.js");
 
+  const Exception = __webpack_require__(/*! ./exception */ "./babel.build/exception.js");
+
   class Base {
     constructor() {
       this.annotations = {
@@ -145,22 +147,65 @@
   }
 
   class Job extends Base {
-    constructor(...args) {
-      super(...args);
-      this.b = 0;
+    constructor(initialData) {
+      super();
+      this.id = null;
+      this.assignee = null;
+      this.status = null;
+      this.startFrame = null;
+      this.stopFrame = null;
+      this.task = null;
+
+      for (const property in this) {
+        if (Object.prototype.hasOwnProperty.call(this, property)) {
+          if (property in initialData) {
+            this[property] = initialData[property];
+          }
+
+          if (this[property] === null) {
+            throw new Exception('Some fields in job is not initialized');
+          }
+        }
+      }
     }
 
   }
 
   class Task extends Base {
-    constructor(...args) {
-      super(...args);
-      this.c = 0;
+    constructor(initialData = {}) {
+      super();
+      this.id = null;
+      this.name = null;
+      this.status = null;
+      this.size = null;
+      this.mode = null;
+      this.owner = null;
+      this.assignee = null;
+      this.createdDate = null;
+      this.updatedDate = null;
+      this.bugTracker = null;
+      this.overlap = null;
+      this.segmentSize = null;
+      this.zOrder = null;
+      this.labels = [];
+      this.jobs = [];
+      this.data = {
+        sever_files: null,
+        client_files: null,
+        remote_files: null
+      };
+
+      for (const property in this) {
+        if (Object.prototype.hasOwnProperty.call(this, property) && property in initialData) {
+          this[property] = initialData[property];
+        }
+      }
     }
 
   }
 
   module.exports = {
+    Base,
     Task,
     Job
   };
@@ -199,6 +244,8 @@
 
   const FrameData = __webpack_require__(/*! ./frames */ "./babel.build/frames.js");
 
+  const ObjectState = __webpack_require__(/*! ./object-state */ "./babel.build/object-state.js");
+
   const {
     Base,
     Task,
@@ -234,24 +281,26 @@
     };
 
     cvat.tasks.get.implementation = async filter => {
-      return new Task();
+      return [new Task()];
     };
 
     cvat.jobs.get.implementation = async filter => {
-      return new Job();
+      return [new Job({})];
     };
 
     cvat.users.get.implementation = async filter => {
-      return new User();
+      return [new User()];
     };
 
-    async function checkContext(wrappedFunction, ...args) {
-      if (!(this instanceof Base)) {
-        throw new Exception('Bad context for the function');
-      }
+    function checkContext(wrappedFunction) {
+      return async function wrapper(...args) {
+        if (!(this instanceof Base)) {
+          throw new Exception('Bad context for the function');
+        }
 
-      const result = await wrappedFunction.call(this, args);
-      return result;
+        const result = await wrappedFunction.call(this, ...args);
+        return result;
+      };
     }
 
     cvat.Task.annotations.upload.implementation = checkContext(async file => {// TODO: Update annotations
@@ -274,7 +323,8 @@
     });
     cvat.Task.annotations.put.implementation = checkContext(async arrayOfObjects => {// TODO: Make from objects
     });
-    cvat.Task.annotations.get.implementation = checkContext(async (frame, filter) => {// TODO: Return collection
+    cvat.Task.annotations.get.implementation = checkContext(async (frame, filter) => {
+      return [new ObjectState()]; // TODO: Return collection
     });
     cvat.Task.annotations.search.implementation = checkContext(async (filter, frameFrom, frameTo) => {
       return 0;
@@ -331,95 +381,95 @@
 
   const annotationsModule = {
     async upload(file) {
-      const result = await PluginRegistry.apiWrapper(annotationsModule.upload, file);
+      const result = await PluginRegistry.apiWrapper.call(this, annotationsModule.upload, file);
       return result;
     },
 
     async save() {
-      const result = await PluginRegistry.apiWrapper(annotationsModule.save);
+      const result = await PluginRegistry.apiWrapper.call(this, annotationsModule.save);
       return result;
     },
 
     async clear() {
-      const result = await PluginRegistry.apiWrapper(annotationsModule.clear);
+      const result = await PluginRegistry.apiWrapper.call(this, annotationsModule.clear);
       return result;
     },
 
     async dump() {
-      const result = await PluginRegistry.apiWrapper(annotationsModule.dump);
+      const result = await PluginRegistry.apiWrapper.call(this, annotationsModule.dump);
       return result;
     },
 
     async statistics() {
-      const result = await PluginRegistry.apiWrapper(annotationsModule.statistics);
+      const result = await PluginRegistry.apiWrapper.call(this, annotationsModule.statistics);
       return result;
     },
 
     async put(arrayOfObjects = []) {
-      const result = await PluginRegistry.apiWrapper(annotationsModule.put, arrayOfObjects);
+      const result = await PluginRegistry.apiWrapper.call(this, annotationsModule.put, arrayOfObjects);
       return result;
     },
 
     async get(frame, filter = {}) {
-      const result = await PluginRegistry.apiWrapper(annotationsModule.get, frame, filter);
+      const result = await PluginRegistry.apiWrapper.call(this, annotationsModule.get, frame, filter);
       return result;
     },
 
     async search(filter, frameFrom, frameTo) {
-      const result = await PluginRegistry.apiWrapper(annotationsModule.search, filter, frameFrom, frameTo);
+      const result = await PluginRegistry.apiWrapper.call(this, annotationsModule.search, filter, frameFrom, frameTo);
       return result;
     },
 
     async select(frame, x, y) {
-      const result = await PluginRegistry.apiWrapper(annotationsModule.select, frame, x, y);
+      const result = await PluginRegistry.apiWrapper.call(this, annotationsModule.select, frame, x, y);
       return result;
     }
 
   };
   const framesModule = {
     async get(frame) {
-      const result = await PluginRegistry.apiWrapper(framesModule.get, frame);
+      const result = await PluginRegistry.apiWrapper.call(this, framesModule.get, frame);
       return result;
     }
 
   };
   const logsModule = {
     async put(logType, details) {
-      const result = await PluginRegistry.apiWrapper(logsModule.put, logType, details);
+      const result = await PluginRegistry.apiWrapper.call(this, logsModule.put, logType, details);
       return result;
     },
 
     async save() {
-      const result = await PluginRegistry.apiWrapper(logsModule.save);
+      const result = await PluginRegistry.apiWrapper.call(this, logsModule.save);
       return result;
     }
 
   };
   const actionsModule = {
     async undo(count) {
-      const result = await PluginRegistry.apiWrapper(actionsModule.undo, count);
+      const result = await PluginRegistry.apiWrapper.call(this, actionsModule.undo, count);
       return result;
     },
 
     async redo(count) {
-      const result = await PluginRegistry.apiWrapper(actionsModule.redo, count);
+      const result = await PluginRegistry.apiWrapper.call(this, actionsModule.redo, count);
       return result;
     },
 
     async clear() {
-      const result = await PluginRegistry.apiWrapper(actionsModule.clear);
+      const result = await PluginRegistry.apiWrapper.call(this, actionsModule.clear);
       return result;
     }
 
   };
   const eventsModule = {
     async subscribe(eventType, callback) {
-      const result = await PluginRegistry.apiWrapper(eventsModule.subscribe, eventType, callback);
+      const result = await PluginRegistry.apiWrapper.call(this, eventsModule.subscribe, eventType, callback);
       return result;
     },
 
     async unsubscribe(eventType, callback = null) {
-      const result = await PluginRegistry.apiWrapper(eventsModule.unsubscribe, eventType, callback);
+      const result = await PluginRegistry.apiWrapper.call(this, eventsModule.unsubscribe, eventType, callback);
       return result;
     }
 
@@ -519,7 +569,40 @@
   const implementation = __webpack_require__(/*! ./api-implementation */ "./babel.build/api-implementation.js");
 
   global.cvat = Object.freeze(implementation(cvat));
-})(); // TODO: Server proxy
+})();
+
+async function test() {
+  const task = (await global.cvat.tasks.get())[0];
+  const job = (await global.cvat.jobs.get())[0];
+  const user = (await global.cvat.users.get())[0];
+  console.log(task);
+  console.log(job);
+  console.log(user);
+  console.log((await task.annotations.upload()));
+  console.log((await task.annotations.save()));
+  console.log((await task.annotations.clear()));
+  console.log((await task.annotations.dump()));
+  console.log((await task.annotations.statistics()));
+  console.log((await task.annotations.put([])));
+  console.log((await task.annotations.get(0, {
+    id: 0
+  })));
+  console.log((await task.annotations.search({
+    id: 0
+  }, 0, 10)));
+  console.log((await task.annotations.select(0, 10, 20)));
+  console.log((await task.frames.get(0)));
+  task.frames.get(0).then(im => im.image()).then(im => console.log(im));
+  console.log((await task.logs.put('someLog')));
+  console.log((await task.logs.save()));
+  console.log((await task.actions.undo()));
+  console.log((await task.actions.redo()));
+  console.log((await task.actions.clear()));
+  console.log((await task.events.subscribe('eventType')));
+  console.log((await task.events.unsubscribe('eventType')));
+}
+
+test(); // TODO: Server proxy
 // TODO: Plugins installation
 // TODO: Documentation with http://yui.github.io/yuidoc/syntax/index.html
 /* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../node_modules/webpack/buildin/global.js */ "./node_modules/webpack/buildin/global.js")))
@@ -588,19 +671,20 @@
           value: 768,
           writable: false
         },
-
-        async image() {
-          const {
-            api
-          } = global.cvat.config;
-          const {
-            host
-          } = global.cvat.config;
-          return new Promise(resolve => {
-            resolve(`${host}/api/${api}/tasks/${tid}/frames/${number}`);
-          });
+        image: {
+          value: async () => {
+            const {
+              api
+            } = global.cvat.config;
+            const {
+              host
+            } = global.cvat.config;
+            return new Promise(resolve => {
+              resolve(`${host}/api/${api}/tasks/${tid}/frames/${number}`);
+            });
+          },
+          writable: false
         }
-
       });
     }
 
@@ -649,6 +733,33 @@
 
 /***/ }),
 
+/***/ "./babel.build/object-state.js":
+/*!*************************************!*\
+  !*** ./babel.build/object-state.js ***!
+  \*************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+/*
+* Copyright (C) 2018 Intel Corporation
+* SPDX-License-Identifier: MIT
+*/
+(() => {
+  class ObjectState {
+    constructor() {
+      this.a = 5;
+    }
+
+  }
+
+  module.exports = ObjectState;
+})();
+
+/***/ }),
+
 /***/ "./babel.build/plugins.js":
 /*!********************************!*\
   !*** ./babel.build/plugins.js ***!
@@ -682,7 +793,7 @@
         }
       }
 
-      let result = await wrappedFunc.implementation(...args);
+      let result = await wrappedFunc.implementation.call(this, ...args);
 
       for (const plugin of pluginList) {
         const pluginDecorators = plugin.functions.filter(obj => obj.callback === wrappedFunc)[0];
@@ -753,8 +864,68 @@
 */
 (() => {
   class User {
-    constructor() {
-      this.annotations = {};
+    constructor(initialData = {}) {
+      this.id = null;
+      this.username = null;
+      this.email = null;
+      this.firstName = null;
+      this.lastName = null;
+      this.groups = null;
+      this.lastLogin = null;
+      this.dateJoined = null;
+      this.isStaff = null;
+      this.isSuperuser = null;
+      this.isActive = null;
+
+      for (const property in this) {
+        if (Object.prototype.hasOwnProperty.call(this, property) && property in initialData) {
+          this[property] = initialData[property];
+        }
+      }
+    }
+
+    get id() {
+      return this.id;
+    }
+
+    get username() {
+      return this.username;
+    }
+
+    get email() {
+      return this.email;
+    }
+
+    get firstName() {
+      return this.firstName;
+    }
+
+    get lastName() {
+      return this.lastName;
+    }
+
+    get groups() {
+      return JSON.parse(JSON.stringify(this.groups));
+    }
+
+    get lastLogin() {
+      return this.lastLogin;
+    }
+
+    get dateJoined() {
+      return this.dateJoined;
+    }
+
+    get isStaff() {
+      return this.isStaff;
+    }
+
+    get isSuperuser() {
+      return this.isSuperuser;
+    }
+
+    get isActive() {
+      return this.isActive;
     }
 
   }
