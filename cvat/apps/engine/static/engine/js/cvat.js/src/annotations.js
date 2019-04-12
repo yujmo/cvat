@@ -10,6 +10,7 @@
 
 (() => {
     const { Attribute, Label } = require('./labels');
+    const Exception = require('./exception');
 
     class Base {
         constructor() {
@@ -48,16 +49,60 @@
     }
 
     class Job extends Base {
-        constructor(...args) {
-            super(...args);
-            this.b = 0;
+        constructor(initialData) {
+            super();
+
+            this.id = null;
+            this.assignee = null;
+            this.status = null;
+            this.startFrame = null;
+            this.stopFrame = null;
+            this.task = null;
+
+            for (const property in this) {
+                if (Object.prototype.hasOwnProperty.call(this, property)) {
+                    if (property in initialData) {
+                        this[property] = initialData[property];
+                    }
+                    if (this[property] === null) {
+                        throw Exception('Some fields in job is not initialized');
+                    }
+                }
+            }
         }
     }
 
     class Task extends Base {
-        constructor(...args) {
-            super(...args);
-            this.c = 0;
+        constructor(initialData = {}) {
+            super();
+
+            this.id = null;
+            this.name = null;
+            this.status = null;
+            this.size = null;
+            this.mode = null;
+            this.owner = null;
+            this.assignee = null;
+            this.createdDate = null;
+            this.updatedDate = null;
+            this.bugTracker = null;
+            this.overlap = null;
+            this.segmentSize = null;
+            this.zOrder = null;
+            this.labels = [];
+            this.jobs = [];
+            this.data = {
+                sever_files: null,
+                client_files: null,
+                remote_files: null,
+            };
+
+            for (const property in this) {
+                if (Object.prototype.hasOwnProperty.call(this, property)
+                    && property in initialData) {
+                    this[property] = initialData[property];
+                }
+            }
         }
     }
 

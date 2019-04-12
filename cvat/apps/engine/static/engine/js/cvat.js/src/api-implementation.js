@@ -14,6 +14,7 @@
     const Exception = require('./exception');
     const Statistics = require('./statistics');
     const FrameData = require('./frames');
+    const ObjectState = require('./object-state');
     const { Base, Task, Job } = require('./annotations');
 
     function implement(cvat) {
@@ -120,6 +121,7 @@
 
         cvat.Task.annotations.get.implementation = checkContext(
             async (frame, filter) => {
+                return [new ObjectState()];
                 // TODO: Return collection
             },
         );
