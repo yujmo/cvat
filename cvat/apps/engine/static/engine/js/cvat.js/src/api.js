@@ -14,13 +14,13 @@
     const annotationsModule = {
         async upload(file) {
             const result = await PluginRegistry
-                .apiWrapper(annotationsModule.upload, file);
+                .apiWrapper.call(this, annotationsModule.upload, file);
             return result;
         },
 
         async save() {
             const result = await PluginRegistry
-                .apiWrapper(annotationsModule.save);
+                .apiWrapper.call(this, annotationsModule.save);
             return result;
         },
 
@@ -32,37 +32,37 @@
 
         async dump() {
             const result = await PluginRegistry
-                .apiWrapper(annotationsModule.dump);
+                .apiWrapper.call(this, annotationsModule.dump);
             return result;
         },
 
         async statistics() {
             const result = await PluginRegistry
-                .apiWrapper(annotationsModule.statistics);
+                .apiWrapper.call(this, annotationsModule.statistics);
             return result;
         },
 
         async put(arrayOfObjects = []) {
             const result = await PluginRegistry
-                .apiWrapper(annotationsModule.put, arrayOfObjects);
+                .apiWrapper.call(this, annotationsModule.put, arrayOfObjects);
             return result;
         },
 
         async get(frame, filter = {}) {
             const result = await PluginRegistry
-                .apiWrapper(annotationsModule.get, frame, filter);
+                .apiWrapper.call(this, annotationsModule.get, frame, filter);
             return result;
         },
 
         async search(filter, frameFrom, frameTo) {
             const result = await PluginRegistry
-                .apiWrapper(annotationsModule.search, filter, frameFrom, frameTo);
+                .apiWrapper.call(this, annotationsModule.search, filter, frameFrom, frameTo);
             return result;
         },
 
         async select(frame, x, y) {
             const result = await PluginRegistry
-                .apiWrapper(annotationsModule.select, frame, x, y);
+                .apiWrapper.call(this, annotationsModule.select, frame, x, y);
             return result;
         },
     };
@@ -70,7 +70,7 @@
     const framesModule = {
         async get(frame) {
             const result = await PluginRegistry
-                .apiWrapper(framesModule.get, frame);
+                .apiWrapper.call(this, framesModule.get, frame);
             return result;
         },
     };
@@ -78,12 +78,12 @@
     const logsModule = {
         async put(logType, details) {
             const result = await PluginRegistry
-                .apiWrapper(logsModule.put, logType, details);
+                .apiWrapper.call(this, logsModule.put, logType, details);
             return result;
         },
         async save() {
             const result = await PluginRegistry
-                .apiWrapper(logsModule.save);
+                .apiWrapper.call(this, logsModule.save);
             return result;
         },
     };
@@ -91,17 +91,17 @@
     const actionsModule = {
         async undo(count) {
             const result = await PluginRegistry
-                .apiWrapper(actionsModule.undo, count);
+                .apiWrapper.call(this, actionsModule.undo, count);
             return result;
         },
         async redo(count) {
             const result = await PluginRegistry
-                .apiWrapper(actionsModule.redo, count);
+                .apiWrapper.call(this, actionsModule.redo, count);
             return result;
         },
         async clear() {
             const result = await PluginRegistry
-                .apiWrapper(actionsModule.clear);
+                .apiWrapper.call(this, actionsModule.clear);
             return result;
         },
     };
@@ -109,12 +109,12 @@
     const eventsModule = {
         async subscribe(eventType, callback) {
             const result = await PluginRegistry
-                .apiWrapper(eventsModule.subscribe, eventType, callback);
+                .apiWrapper.call(this, eventsModule.subscribe, eventType, callback);
             return result;
         },
         async unsubscribe(eventType, callback = null) {
             const result = await PluginRegistry
-                .apiWrapper(eventsModule.unsubscribe, eventType, callback);
+                .apiWrapper.call(this, eventsModule.unsubscribe, eventType, callback);
             return result;
         },
     };
@@ -219,7 +219,24 @@
 
 async function test() {
     const task = (await global.cvat.tasks.get())[0];
-    await task.annotations.clear();
+    console.log(await task.annotations.upload());
+    console.log(await task.annotations.save());
+    console.log(await task.annotations.clear());
+    console.log(await task.annotations.dump());
+    console.log(await task.annotations.statistics());
+    console.log(await task.annotations.put([]));
+    console.log(await task.annotations.get(0, { id: 0 }));
+    console.log(await task.annotations.search({ id: 0 }, 0, 10));
+    console.log(await task.annotations.select(0, 10, 20));
+    console.log(await task.frames.get(0));
+    task.frames.get(0).then(im => im.image()).then(im => console.log(im));
+    console.log(await task.logs.put('someLog'));
+    console.log(await task.logs.save());
+    console.log(await task.actions.undo());
+    console.log(await task.actions.redo());
+    console.log(await task.actions.clear());
+    console.log(await task.events.subscribe('eventType'));
+    console.log(await task.events.unsubscribe('eventType'));
 }
 
 test();

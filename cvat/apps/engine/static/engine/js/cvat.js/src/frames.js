@@ -19,12 +19,15 @@
                     value: 768,
                     writable: false,
                 },
-                async image() {
-                    const { api } = global.cvat.config;
-                    const { host } = global.cvat.config;
-                    return new Promise((resolve) => {
-                        resolve(`${host}/api/${api}/tasks/${tid}/frames/${number}`);
-                    });
+                image: {
+                    value: async () => {
+                        const { api } = global.cvat.config;
+                        const { host } = global.cvat.config;
+                        return new Promise((resolve) => {
+                            resolve(`${host}/api/${api}/tasks/${tid}/frames/${number}`);
+                        });
+                    },
+                    writable: false,
                 },
             });
         }
