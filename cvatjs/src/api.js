@@ -166,7 +166,7 @@
             },
         },
         config: {
-            host: '',
+            host: 'http://localhost:7000',
             api: 'v1',
         },
         client: {
@@ -244,8 +244,9 @@ async function test() {
     console.log(await task.events.unsubscribe('eventType'));
 }
 
-test();
+//test();
 
+const serverProxy = require('./server-proxy');
 
 // TODO: Server proxy
 // TODO: Plugins installation

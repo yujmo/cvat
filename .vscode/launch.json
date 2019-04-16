@@ -122,7 +122,7 @@
             "name": "cvat.js test",
             "type": "node",
             "request": "launch",
-            "cwd": "${workspaceFolder}/cvat/apps/engine/static/engine/js/cvat.js",
+            "cwd": "${workspaceFolder}/cvatjs",
             "runtimeExecutable": "npm",
             "runtimeArgs": [
                 "run-script", "test"
@@ -133,7 +133,7 @@
             "name": "cvat.js debug",
             "type": "node",
             "request": "launch",
-            "cwd": "${workspaceFolder}/cvat/apps/engine/static/engine/js/cvat.js",
+            "cwd": "${workspaceFolder}/cvatjs",
             "runtimeExecutable": "npm",
             "runtimeArgs": [
                 "run-script", "debug"
