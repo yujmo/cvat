@@ -4,7 +4,7 @@ import cvat.apps.engine.models
 from django.db import migrations, models
 import django.db.models.deletion
 from django.conf import settings
-from cvat.apps.engine.annotation_v2 import _merge_table_rows
+from cvat.apps.engine.annotation import _merge_table_rows
 
 # some modified functions to transer annotation
 def _bulk_create(db_model, db_alias, objects, flt_param = {}):
@@ -722,13 +722,10 @@ class Migration(migrations.Migration):
             name='image',
             field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='engine.LabeledImage'),
         ),
-
         migrations.RunPython(
             code=copy_annotations_forward,
             reverse_code=copy_annotations_backward,
         ),
-
-
         migrations.RemoveField(
             model_name='labeledbox',
             name='job',
@@ -764,6 +761,10 @@ class Migration(migrations.Migration):
         migrations.RemoveField(
             model_name='labeledpolygon',
             name='job',
+        ),
+        migrations.RemoveField(
+            model_name='job',
+            name='max_shape_id',
         ),
         migrations.RemoveField(
             model_name='labeledpolygon',
