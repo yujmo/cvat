@@ -6,6 +6,7 @@
 /* global
     require:false
     global:false
+    encodeURIComponent:false
 */
 
 (() => {
@@ -14,100 +15,216 @@
             const Cookie = require('js-cookie');
             const Axios = require('axios');
 
-            async function authentificate1(username, password) {
-                let response = await Axios.get(`${global.cvat.config.host}/auth/login`, {
-                    proxy: false,
-                });
-
-                let all = '';
-                for (const cookie of response.headers['set-cookie']) {
-                    const name = cookie.split(';')[0].split('=')[0];
-                    const value = cookie.split(';')[0].split('=')[1];
-                    all += cookie.split(';')[0];
-                    Axios.defaults.headers.common['X-CSRFToken'] = value;
-                    Cookie.set(name, value);
-                }
-                Axios.defaults.headers.common.Cookie = all;
-
-                const urlEncodedDataPairs = [
-                    encodeURIComponent('username') + '=' + encodeURIComponent('admin'),
-                    encodeURIComponent('password') + '=' + encodeURIComponent('nimda760')
-                ];
-                const data = urlEncodedDataPairs.join('&').replace(/%20/g, '+');
-                let response1 = null;
-                try {
-                    response1 = await Axios.post(`${global.cvat.config.host}/auth/login`, data, {
-                        proxy: false,
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        maxRedirects: 0,
-                    });
-                } catch (err) {
-                    if (err.response.status === 302) {
-                        all = '';
-                        for (const cookie of err.response.headers['set-cookie']) {
-                            const name = cookie.split(';')[0].split('=')[0];
-                            const value = cookie.split(';')[0].split('=')[1];
-                            all += `${cookie.split(';')[0]};`;
-                            delete Axios.defaults.headers.common['X-CSRFToken'];
-                            Cookie.set(name, value);
-                        }
-                        Axios.defaults.headers.common.Cookie = all;
-                    }
-                }
-
-                const a = await Axios.get('http://localhost:7000/api/v1/tasks', {
-                    proxy: false,
-                });
-                const b = 5;
-            }
-
-            authentificate1(global.cvat.config.username, global.cvat.config.password);
-
-
             async function about() {
                 const { host } = global.cvat.config;
                 const { api } = global.cvat.config;
-                return new Promise(async (resolve, reject) => {
-                    let data = null;
-                    try {
-                        data = await Axios.get(`${host}/api/${api}/server/about`, { proxy: false });
-                    } catch (errorData) {
-                        const message = 'Fail';
-                        reject(new Error(message));
-                    }
-                    resolve(data);
-                });
+
+                let response = null;
+                try {
+                    response = await Axios.get(`${host}/api/${api}/server/about`, {
+                        proxy: global.cvat.config.proxy,
+                    });
+                } catch (errorData) {
+                    // make exception
+                }
+
+                return response;
             }
 
             async function share(directory) {
+                const { host } = global.cvat.config;
+                const { api } = global.cvat.config;
 
+                let response = null;
+                try {
+                    response = await Axios.get(`${host}/api/${api}/server/share?directory=${directory}`, {
+                        proxy: global.cvat.config.proxy,
+                    });
+                } catch (errorData) {
+                    // make exception
+                }
+
+                return response;
             }
 
-            async function exception(exception) {
+            async function exception(exceptionObject) {
+                const { host } = global.cvat.config;
+                const { api } = global.cvat.config;
 
+                try {
+                    await Axios.post(`${host}/api/${api}/server/exception`, JSON.stringify({
+                        system: exceptionObject.system,
+                        client: exceptionObject.client,
+                        time: exceptionObject.time,
+                        job_id: exceptionObject.jobID,
+                        task_id: exceptionObject.taskID,
+                        proj_id: exceptionObject.projID,
+                        client_id: exceptionObject.clientID,
+                        message: exceptionObject.message,
+                        filename: exceptionObject.filename,
+                        line: exceptionObject.line,
+                        column: exceptionObject.column,
+                        stack: exceptionObject.stack,
+                    }), {
+                        proxy: global.cvat.config.proxy,
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                    });
+                } catch (errorData) {
+                    // add log if save fault
+                }
             }
 
-            async function getTasks(filter) {
+            async function authentificate(username, password) {
+                function setCookie(response) {
+                    if (response.headers['set-cookie']) {
+                        // Browser itself setup cookie and header is none
+                        // In NodeJS we need do it manually
+                        let cookies = '';
+                        for (let cookie of response.headers['set-cookie']) {
+                            [cookie] = cookie.split(';'); // truncate extra information
+                            const name = cookie.split('=')[0];
+                            const value = cookie.split('=')[1];
+                            if (name === 'csrftoken') {
+                                Axios.defaults.headers.common['X-CSRFToken'] = value;
+                            }
+                            Cookie.set(name, value);
+                            cookies += `${cookie};`;
+                        }
 
+                        Axios.defaults.headers.common.Cookie = cookies;
+                    } else {
+                        // Browser code. We need set additinal header for authentification
+                        const csrftoken = Cookie.get('csrftoken');
+                        if (csrftoken) {
+                            Axios.defaults.headers.common['X-CSRFToken'] = csrftoken;
+                        } else {
+                            // make exception
+                        }
+                    }
+                }
+
+                let csrf = null;
+                try {
+                    csrf = await Axios.get(`${global.cvat.config.host}/auth/login`, {
+                        proxy: global.cvat.config.proxy,
+                    });
+                } catch (errorData) {
+                    // make exception
+                }
+
+                setCookie(csrf);
+
+                const authentificationData = ([
+                    `${encodeURIComponent('username')}=${encodeURIComponent(username)}`,
+                    `${encodeURIComponent('password')}=${encodeURIComponent(password)}`,
+                ]).join('&').replace(/%20/g, '+');
+
+                let authentificationResponse = null;
+                try {
+                    authentificationResponse = await Axios.post(
+                        `${global.cvat.config.host}/auth/login`,
+                        authentificationData,
+                        {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            proxy: global.cvat.config.proxy,
+                            // do not redirect to a dashboard,
+                            // otherwise we don't get a session id in a response
+                            maxRedirects: 0,
+                        },
+                    );
+                } catch (errorData) {
+                    if (errorData.response.status === 302) {
+                        // Redirection code expected
+                        authentificationResponse = errorData.response;
+                    } else {
+                        // make exception
+                    }
+                }
+
+                setCookie(authentificationResponse);
             }
 
-            async function getJobs(filter) {
+            async function getTasks(filter = '') {
+                const { host } = global.cvat.config;
+                const { api } = global.cvat.config;
 
+                let response = null;
+                try {
+                    response = await Axios.get(`${host}/api/${api}/tasks?${filter}`, {
+                        proxy: global.cvat.config.proxy,
+                    });
+                } catch (errorData) {
+                    // make exception
+                }
+
+                return response.data;
             }
 
-            async function getUsers(filter) {
+            async function getTaskJobs(taskID) {
+                const { host } = global.cvat.config;
+                const { api } = global.cvat.config;
 
+                let response = null;
+                try {
+                    response = await Axios.get(`${host}/api/${api}/tasks/${taskID}/jobs`, {
+                        proxy: global.cvat.config.proxy,
+                    });
+                } catch (errorData) {
+                    // make exception
+                }
+
+                return response.data;
             }
 
-            // TODO
-            // Save job
-            // Save job annotations
-            // Save task annotations
-            // Dump annotations
-            // Frame
-            // MetaInfo
-            // Logs
-            // Create task, append files
+            async function getJob(jobID) {
+                const { host } = global.cvat.config;
+                const { api } = global.cvat.config;
+
+                let response = null;
+                try {
+                    response = await Axios.get(`${host}/api/${api}/jobs/${jobID}`, {
+                        proxy: global.cvat.config.proxy,
+                    });
+                } catch (errorData) {
+                    // make exception
+                }
+
+                return response.data;
+            }
+
+            async function getUsers() {
+                const { host } = global.cvat.config;
+                const { api } = global.cvat.config;
+
+                let response = null;
+                try {
+                    response = await Axios.get(`${host}/api/${api}/users`, {
+                        proxy: global.cvat.config.proxy,
+                    });
+                } catch (errorData) {
+                    // make exception
+                }
+
+                return response.data;
+            }
+
+            async function getSelf() {
+                const { host } = global.cvat.config;
+                const { api } = global.cvat.config;
+
+                let response = null;
+                try {
+                    response = await Axios.get(`${host}/api/${api}/users/self`, {
+                        proxy: global.cvat.config.proxy,
+                    });
+                } catch (errorData) {
+                    // make exception
+                }
+
+                return response.data;
+            }
 
             Object.defineProperties(this, {
                 server: {
@@ -115,6 +232,7 @@
                         about,
                         share,
                         exception,
+                        authentificate,
                     }),
                     writable: false,
                 },
@@ -128,14 +246,16 @@
 
                 jobs: {
                     value: Object.freeze({
-                        get: getJobs,
+                        getTaskJobs,
+                        getJob,
                     }),
                     writable: false,
                 },
 
                 users: {
                     value: Object.freeze({
-                        get: getUsers,
+                        getUsers,
+                        getSelf,
                     }),
                     writable: false,
                 },
@@ -143,5 +263,5 @@
         }
     }
 
-    module.exports = new ServerProxy();
+    module.exports = ServerProxy;
 })();

@@ -168,6 +168,7 @@
         config: {
             host: 'http://localhost:7000',
             api: 'v1',
+            proxy: false,
         },
         client: {
             version: '1.0.0',
@@ -218,36 +219,18 @@
 })();
 
 async function test() {
-    const task = (await global.cvat.tasks.get())[0];
-    const job = (await global.cvat.jobs.get())[0];
-    const user = (await global.cvat.users.get())[0];
-    console.log(task);
-    console.log(job);
-    console.log(user);
-    console.log(await task.annotations.upload());
-    console.log(await task.annotations.save());
-    console.log(await task.annotations.clear());
-    console.log(await task.annotations.dump());
-    console.log(await task.annotations.statistics());
-    console.log(await task.annotations.put([]));
-    console.log(await task.annotations.get(0, { id: 0 }));
-    console.log(await task.annotations.search({ id: 0 }, 0, 10));
-    console.log(await task.annotations.select(0, 10, 20));
-    console.log(await task.frames.get(0));
-    task.frames.get(0).then(im => im.image()).then(im => console.log(im));
-    console.log(await task.logs.put('someLog'));
-    console.log(await task.logs.save());
-    console.log(await task.actions.undo());
-    console.log(await task.actions.redo());
-    console.log(await task.actions.clear());
-    console.log(await task.events.subscribe('eventType'));
-    console.log(await task.events.unsubscribe('eventType'));
+    const ServerProxy = require('./server-proxy');
+    const serverProxy = new ServerProxy();
+
+    await serverProxy.server.authentificate('admin', 'nimda760');
+    console.log(JSON.stringify(await serverProxy.tasks.get()));
+    console.log(JSON.stringify(await serverProxy.jobs.getJob(18)));
+    console.log(JSON.stringify(await serverProxy.jobs.getTaskJobs(14)));
+    console.log(JSON.stringify(await serverProxy.users.getUsers()));
+    console.log(JSON.stringify(await serverProxy.users.getSelf()));
 }
 
-//test();
-
-const serverProxy = require('./server-proxy');
-
+test();
 // TODO: Server proxy
 // TODO: Plugins installation
 // TODO: Documentation with http://yui.github.io/yuidoc/syntax/index.html
