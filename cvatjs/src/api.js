@@ -231,6 +231,6 @@ async function test() {
 }
 
 test();
-// TODO: Server proxy
+
 // TODO: Plugins installation
-// TODO: Documentation with http://yui.github.io/yuidoc/syntax/index.html
+// TODO: Documentation

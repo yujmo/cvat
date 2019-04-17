@@ -4,6 +4,11 @@
 */
 
 
+// Authentification exception
+// Network communication exception
+// Server Error
+
+
 (() => {
     const serverProxy = require('./server-proxy');
 
@@ -79,5 +84,8 @@
         }
     }
 
-    module.exports = Exception;
+    module.exports = {
+        Exception,
+
+    };
 })();

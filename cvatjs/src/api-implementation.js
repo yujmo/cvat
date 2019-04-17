@@ -15,6 +15,7 @@
     const Statistics = require('./statistics');
     const FrameData = require('./frames');
     const ObjectState = require('./object-state');
+    const ServerProxy = require('./server-proxy');
     const { Base, Task, Job } = require('./annotations');
 
     function implement(cvat) {

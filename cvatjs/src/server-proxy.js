@@ -15,6 +15,13 @@
             const Cookie = require('js-cookie');
             const Axios = require('axios');
 
+            function setCSRFHeader(header) {
+                Axios.defaults.headers.delete['X-CSRFToken'] = header;
+                Axios.defaults.headers.patch['X-CSRFToken'] = header;
+                Axios.defaults.headers.post['X-CSRFToken'] = header;
+                Axios.defaults.headers.put['X-CSRFToken'] = header;
+            }
+
             async function about() {
                 const { host } = global.cvat.config;
                 const { api } = global.cvat.config;
@@ -87,7 +94,7 @@
                             const name = cookie.split('=')[0];
                             const value = cookie.split('=')[1];
                             if (name === 'csrftoken') {
-                                Axios.defaults.headers.common['X-CSRFToken'] = value;
+                                setCSRFHeader(value);
                             }
                             Cookie.set(name, value);
                             cookies += `${cookie};`;
@@ -98,7 +105,7 @@
                         // Browser code. We need set additinal header for authentification
                         const csrftoken = Cookie.get('csrftoken');
                         if (csrftoken) {
-                            Axios.defaults.headers.common['X-CSRFToken'] = csrftoken;
+                            setCSRFHeader(csrftoken);
                         } else {
                             // make exception
                         }
@@ -224,6 +231,14 @@
                 }
 
                 return response.data;
+            }
+
+            // Set csrftoken header from browser cookies if it exists
+            // NodeJS env returns 'undefined'
+            // So in NodeJS we need authentificate after each run
+            const csrftoken = Cookie.get('csrftoken');
+            if (csrftoken) {
+                setCSRFHeader(csrftoken);
             }
 
             Object.defineProperties(this, {
