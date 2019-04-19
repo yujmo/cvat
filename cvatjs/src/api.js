@@ -125,6 +125,84 @@
     };
 
     /**
+        * @typedef {Object} ServerInfo
+        * @property {string} name A name of the tool [ReadOnly]
+        * @property {string} description A description of the tool [ReadOnly]
+        * @property {string} version A version of the tool [ReadOnly]
+        * @global
+    */
+
+    /**
+        * @typedef {Object} FileInfo
+        * @property {string} name A name of a file [ReadOnly]
+        * @property {module:API.cvat.enums.ShareFileType} type
+        * A type of a file 'DIR' or 'REG' [ReadOnly]
+        * @global
+    */
+
+    /**
+        * @typedef {Object} TaskFilter
+        * @property {string} name Check if name contains this value
+        * @property {module:API.cvat.enums.TaskStatus} status
+        * Check if status contains this value
+        * @property {module:API.cvat.enums.TaskMode} mode
+        * Check if mode contains this value
+        * @property {string} id Check if id equals this value
+        * @property {string} owner Check if owner user contains this value
+        * @property {string} assignee Check if assigneed contains this value
+        * @property {string} search Combined search of contains among all fields
+        * @global
+    */
+
+    /**
+        * @typedef {Object} JobFilter
+        * @property {integer} taskID filter all jobs of specific task
+        * @property {integer} jobID filter specific job
+        * @global
+    */
+
+    /**
+        * @typedef {Object} UserFilter
+        * @property {boolean} self get only self
+        * @global
+    */
+
+
+    /**
+        * Enum for type of server files
+        * @enum {string}
+        * @name ShareFileType
+        * @memberof module:API.cvat.enums
+    */
+    const ShareFileType = Object.freeze({
+        DIR: 'DIR',
+        REG: 'REG',
+    });
+
+    /**
+        * Enum for a status of a task
+        * @enum {string}
+        * @name TaskStatus
+        * @memberof module:API.cvat.enums
+    */
+    const TaskStatus = Object.freeze({
+        ANNOTATION: 'annotation',
+        VALIDATION: 'validation',
+        COMPLETED: 'completed',
+    });
+
+    /**
+        * Enum for a mode of a task
+        * @enum {string}
+        * @name TaskMode
+        * @memberof module:API.cvat.enums
+    */
+    const TaskMode = Object.freeze({
+        ANNOTATION: 'annotation',
+        INTERPOLATION: 'interpolation',
+    });
+
+    /**
         * API entrypoint
         * @namespace cvat
         * @memberof module:API
@@ -246,13 +324,33 @@
                 return result;
             },
         },
+        /**
+            * Namespace contains some changeable configurations
+            * @namespace config
+            * @memberof module:API.cvat
+        */
         config: {
             host: 'http://localhost:7000',
             api: 'v1',
             proxy: false,
         },
+        /**
+            * Namespace contains some library information e.g. api version
+            * @namespace client
+            * @memberof module:API.cvat
+        */
         client: {
             version: '1.0.0',
+        },
+        /**
+            * Namespace is used for access to enums
+            * @namespace enums
+            * @memberof module:API.cvat
+        */
+        enums: {
+            ShareFileType,
+            TaskStatus,
+            TaskMode,
         },
         Job: {
             async save() {
@@ -292,6 +390,7 @@
     cvat.users = Object.freeze(cvat.users);
     cvat.plugins = Object.freeze(cvat.plugins);
     cvat.client = Object.freeze(cvat.client);
+    cvat.enums = Object.freeze(cvat.enums);
     cvat.Job = Object.freeze(cvat.Job);
     cvat.Task = Object.freeze(cvat.Task);
 
@@ -299,19 +398,4 @@
     global.cvat = Object.freeze(implementation(cvat));
 })();
 
-async function test() {
-    const ServerProxy = require('./server-proxy');
-    const serverProxy = new ServerProxy();
-
-    await serverProxy.server.authentificate('admin', 'nimda760');
-    console.log(JSON.stringify(await serverProxy.tasks.get()));
-    console.log(JSON.stringify(await serverProxy.jobs.getJob(18)));
-    console.log(JSON.stringify(await serverProxy.jobs.getTaskJobs(14)));
-    console.log(JSON.stringify(await serverProxy.users.getUsers()));
-    console.log(JSON.stringify(await serverProxy.users.getSelf()));
-}
-
-test();
-
 // TODO: Plugins installation
-// TODO: Documentation

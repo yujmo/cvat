@@ -1,20 +1,30 @@
-## Instructions
+# Computer Vision Annotation Tool (JS)
 
-### Commands
+## Description
+This CVAT module has been created in order to easy integration process with CVAT.
 
-Install dependencies
+### Short development manual
+
+-   Install dependencies
 ```
 npm install
 ```
 
-Build library from sources:
+-   Build library from sources in ```dist``` directory:
 ```
 npm run-script build
+```
 
-# Output library: dist/cvat.js
-# Source map: dist/cvat.js.map
+-   Build documentation in ```docs``` directory:
+```
+npm run-script docs
+```
+
+-   Run tests:
+```
+npm run-script test
 ```
 
 Visual studio code configurations:
-* cvat.js debug starts debugging with entrypoint api.js
-* cvat.js test builds library and runs entrypoint tests.js
+-   cvat.js debug starts debugging with entrypoint api.js
+-   cvat.js test builds library and runs entrypoint tests.js
