@@ -8,6 +8,26 @@
     global:false
 */
 
+/**
+ * External API which is should used for an integration
+ * @module API
+ */
+
+/**
+    * @typedef {Object} ServerInfo
+    * @property {string} name A name of the tool [ReadOnly]
+    * @property {string} description A description of the tool [ReadOnly]
+    * @property {string} version A version of the tool [ReadOnly]
+    * @global
+*/
+
+/**
+    * @typedef {Object} FileInfo
+    * @property {string} name A name of a file [ReadOnly]
+    * @property {string} type A type of a file DIR or REG [ReadOnly]
+    * @global
+*/
+
 (() => {
     const PluginRegistry = require('./plugins');
 
@@ -119,19 +139,46 @@
         },
     };
 
+    /**
+        * API entrypoint
+        * @namespace cvat
+    */
     const cvat = {
+        /**
+            * Namespace is used for interaction with a server
+            * @memberof api.cvat
+            * @namespace server
+        */
         server: {
+            /**
+                * Method returns some information about the annotation tool
+                * @method about
+                * @memberof cvat.server
+                * @return {ServerInfo}
+            */
             async about() {
                 const result = await PluginRegistry
                     .apiWrapper(cvat.server.about);
                 return result;
             },
+            /**
+                * Method returns list of files in specified directory in a share
+                * @method share
+                * @memberof cvat.server
+                * @param {string} [directory=/] - Share directory path
+                * @return {FileInfo[]}
+            */
             async share(directory = '/') {
                 const result = await PluginRegistry
                     .apiWrapper(cvat.server.share, directory);
                 return result;
             },
         },
+        /**
+            * Namespace is used for getting tasks
+            * @memberof cvat
+            * @namespace server
+        */
         tasks: {
             async get(filter = {}) {
                 const result = await PluginRegistry
@@ -139,6 +186,11 @@
                 return result;
             },
         },
+        /**
+            * @memberof cvat
+            * @name jobs
+            * @namespace Jobs
+        */
         jobs: {
             async get(filter = {}) {
                 const result = await PluginRegistry
@@ -146,6 +198,11 @@
                 return result;
             },
         },
+        /**
+            * @memberof cvat
+            * @name users
+            * @namespace Users
+        */
         users: {
             async get(filter = {}) {
                 const result = await PluginRegistry
@@ -153,6 +210,11 @@
                 return result;
             },
         },
+        /**
+            * @memberof cvat
+            * @name jobs
+            * @namespace Plugins
+        */
         plugins: {
             async list() {
                 const result = await PluginRegistry
