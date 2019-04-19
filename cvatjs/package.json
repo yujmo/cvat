@@ -9,7 +9,7 @@
     "build": "npm run babel && npm run webpack && rm babel.build -r",
     "test": "npm run build && node --nolazy --inspect-brk=9229 tests.js",
     "debug": "node --nolazy --inspect-brk=9230 src/api.js",
-    "docs": "yuidoc ."
+    "docs": "jsdoc src/*.js -p -c jsdoc.config.js"
   },
   "author": "Intel",
   "license": "MIT",
@@ -17,9 +17,9 @@
     "@babel/cli": "^7.4.3",
     "@babel/core": "^7.4.3",
     "@babel/preset-env": "^7.4.3",
+    "jsdoc": "^3.5.5",
     "webpack": "^4.29.6",
-    "webpack-cli": "^3.3.0",
-    "yuidocjs": "^0.10.2"
+    "webpack-cli": "^3.3.0"
   },
   "dependencies": {
     "axios": "^0.18.0",
