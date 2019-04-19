@@ -10,7 +10,7 @@
 
 (() => {
     const { Attribute, Label } = require('./labels');
-    const Exception = require('./exception');
+    const Exception = require('./exceptions');
 
     class Base {
         constructor() {

@@ -11,7 +11,7 @@
 (() => {
     const PluginRegistry = require('./plugins');
     const User = require('./user');
-    const Exception = require('./exception');
+    const Exception = require('./exceptions');
     const Statistics = require('./statistics');
     const FrameData = require('./frames');
     const ObjectState = require('./object-state');
@@ -57,6 +57,10 @@
                     type: 'DIR',
                 },
             ];
+        };
+
+        cvat.server.login.implementation = async () => {
+
         };
 
         cvat.tasks.get.implementation = async (filter) => {

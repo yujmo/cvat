@@ -15,6 +15,12 @@
 
 (() => {
     const PluginRegistry = require('./plugins');
+    const pjson = require('../package.json');
+    const {
+        ShareFileType,
+        TaskStatus,
+        TaskMode,
+    } = require('./enums');
 
     const annotationsModule = {
         async upload(file) {
@@ -125,84 +131,6 @@
     };
 
     /**
-        * @typedef {Object} ServerInfo
-        * @property {string} name A name of the tool [ReadOnly]
-        * @property {string} description A description of the tool [ReadOnly]
-        * @property {string} version A version of the tool [ReadOnly]
-        * @global
-    */
-
-    /**
-        * @typedef {Object} FileInfo
-        * @property {string} name A name of a file [ReadOnly]
-        * @property {module:API.cvat.enums.ShareFileType} type
-        * A type of a file 'DIR' or 'REG' [ReadOnly]
-        * @global
-    */
-
-    /**
-        * @typedef {Object} TaskFilter
-        * @property {string} name Check if name contains this value
-        * @property {module:API.cvat.enums.TaskStatus} status
-        * Check if status contains this value
-        * @property {module:API.cvat.enums.TaskMode} mode
-        * Check if mode contains this value
-        * @property {string} id Check if id equals this value
-        * @property {string} owner Check if owner user contains this value
-        * @property {string} assignee Check if assigneed contains this value
-        * @property {string} search Combined search of contains among all fields
-        * @global
-    */
-
-    /**
-        * @typedef {Object} JobFilter
-        * @property {integer} taskID filter all jobs of specific task
-        * @property {integer} jobID filter specific job
-        * @global
-    */
-
-    /**
-        * @typedef {Object} UserFilter
-        * @property {boolean} self get only self
-        * @global
-    */
-
-
-    /**
-        * Enum for type of server files
-        * @enum {string}
-        * @name ShareFileType
-        * @memberof module:API.cvat.enums
-    */
-    const ShareFileType = Object.freeze({
-        DIR: 'DIR',
-        REG: 'REG',
-    });
-
-    /**
-        * Enum for a status of a task
-        * @enum {string}
-        * @name TaskStatus
-        * @memberof module:API.cvat.enums
-    */
-    const TaskStatus = Object.freeze({
-        ANNOTATION: 'annotation',
-        VALIDATION: 'validation',
-        COMPLETED: 'completed',
-    });
-
-    /**
-        * Enum for a mode of a task
-        * @enum {string}
-        * @name TaskMode
-        * @memberof module:API.cvat.enums
-    */
-    const TaskMode = Object.freeze({
-        ANNOTATION: 'annotation',
-        INTERPOLATION: 'interpolation',
-    });
-
-    /**
         * API entrypoint
         * @namespace cvat
         * @memberof module:API
@@ -215,8 +143,17 @@
         */
         server: {
             /**
+                * @typedef {Object} ServerInfo
+                * @property {string} name A name of the tool [ReadOnly]
+                * @property {string} description A description of the tool [ReadOnly]
+                * @property {string} version A version of the tool [ReadOnly]
+                * @global
+            */
+
+            /**
                 * Method returns some information about the annotation tool
                 * @method about
+                * @async
                 * @memberof module:API.cvat.server
                 * @return {ServerInfo}
             */
@@ -226,8 +163,17 @@
                 return result;
             },
             /**
+                * @typedef {Object} FileInfo
+                * @property {string} name A name of a file [ReadOnly]
+                * @property {module:API.cvat.enums.ShareFileType} type
+                * A type of a file 'DIR' or 'REG' [ReadOnly]
+                * @global
+            */
+
+            /**
                 * Method returns a list of files in a specified directory on a share
                 * @method share
+                * @async
                 * @memberof module:API.cvat.server
                 * @param {string} [directory=/] - Share directory path
                 * @returns {FileInfo[]}
@@ -240,6 +186,7 @@
             /**
                 * Method allows to login on a server
                 * @method login
+                * @async
                 * @memberof module:API.cvat.server
                 * @param {string} username An username of an account
                 * @param {string} password A password of an account
@@ -257,8 +204,23 @@
         */
         tasks: {
             /**
+                * @typedef {Object} TaskFilter
+                * @property {string} name Check if name contains this value
+                * @property {module:API.cvat.enums.TaskStatus} status
+                * Check if status contains this value
+                * @property {module:API.cvat.enums.TaskMode} mode
+                * Check if mode contains this value
+                * @property {string} id Check if id equals this value
+                * @property {string} owner Check if owner user contains this value
+                * @property {string} assignee Check if assigneed contains this value
+                * @property {string} search Combined search of contains among all fields
+                * @global
+            */
+
+            /**
                 * Method returns list of tasks corresponding to a filter
                 * @method get
+                * @async
                 * @memberof module:API.cvat.tasks
                 * @param {TaskFilter} [filter={}] task filter
                 * @returns {Task[]}
@@ -276,8 +238,16 @@
         */
         jobs: {
             /**
+                * @typedef {Object} JobFilter
+                * @property {integer} taskID filter all jobs of specific task
+                * @property {integer} jobID filter job with a specific id
+                * @global
+            */
+
+            /**
                 * Method returns list of jobs corresponding to a filter
                 * @method get
+                * @async
                 * @memberof module:API.cvat.jobs
                 * @param {JobFilter} filter job filter
                 * @returns {Job[]}
@@ -295,8 +265,15 @@
         */
         users: {
             /**
+                * @typedef {Object} UserFilter
+                * @property {boolean} self get only self
+                * @global
+            */
+
+            /**
                 * Method returns list of users corresponding to a filter
                 * @method get
+                * @async
                 * @memberof module:API.cvat.users
                 * @param {UserFilter} [filter={}] user filter
                 * @returns {User[]}
@@ -340,7 +317,10 @@
             * @memberof module:API.cvat
         */
         client: {
-            version: '1.0.0',
+            /**
+                * @property {string} version client version
+            */
+            version: `${pjson.version}`,
         },
         /**
             * Namespace is used for access to enums
@@ -364,7 +344,6 @@
             actions: Object.freeze(actionsModule),
             events: Object.freeze(eventsModule),
         },
-
         Task: {
             async delete() {
                 const result = await PluginRegistry
