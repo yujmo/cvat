@@ -9,23 +9,8 @@
 */
 
 /**
- * External API which is should used for an integration
- * @module API
- */
-
-/**
-    * @typedef {Object} ServerInfo
-    * @property {string} name A name of the tool [ReadOnly]
-    * @property {string} description A description of the tool [ReadOnly]
-    * @property {string} version A version of the tool [ReadOnly]
-    * @global
-*/
-
-/**
-    * @typedef {Object} FileInfo
-    * @property {string} name A name of a file [ReadOnly]
-    * @property {string} type A type of a file DIR or REG [ReadOnly]
-    * @global
+    * External API which is should used for an integration
+    * @module API
 */
 
 (() => {
@@ -142,18 +127,19 @@
     /**
         * API entrypoint
         * @namespace cvat
+        * @memberof module:API
     */
     const cvat = {
         /**
-            * Namespace is used for interaction with a server
-            * @memberof api.cvat
+            * Namespace is used for an interaction with a server
             * @namespace server
+            * @memberof module:API.cvat
         */
         server: {
             /**
                 * Method returns some information about the annotation tool
                 * @method about
-                * @memberof cvat.server
+                * @memberof module:API.cvat.server
                 * @return {ServerInfo}
             */
             async about() {
@@ -162,24 +148,43 @@
                 return result;
             },
             /**
-                * Method returns list of files in specified directory in a share
+                * Method returns a list of files in a specified directory on a share
                 * @method share
-                * @memberof cvat.server
+                * @memberof module:API.cvat.server
                 * @param {string} [directory=/] - Share directory path
-                * @return {FileInfo[]}
+                * @returns {FileInfo[]}
             */
             async share(directory = '/') {
                 const result = await PluginRegistry
                     .apiWrapper(cvat.server.share, directory);
                 return result;
             },
+            /**
+                * Method allows to login on a server
+                * @method login
+                * @memberof module:API.cvat.server
+                * @param {string} username An username of an account
+                * @param {string} password A password of an account
+            */
+            async login(username, password) {
+                const result = await PluginRegistry
+                    .apiWrapper(cvat.server.login, username, password);
+                return result;
+            },
         },
         /**
             * Namespace is used for getting tasks
-            * @memberof cvat
-            * @namespace server
+            * @namespace tasks
+            * @memberof module:API.cvat
         */
         tasks: {
+            /**
+                * Method returns list of tasks corresponding to a filter
+                * @method get
+                * @memberof module:API.cvat.tasks
+                * @param {TaskFilter} [filter={}] task filter
+                * @returns {Task[]}
+            */
             async get(filter = {}) {
                 const result = await PluginRegistry
                     .apiWrapper(cvat.tasks.get, filter);
@@ -187,23 +192,37 @@
             },
         },
         /**
-            * @memberof cvat
-            * @name jobs
-            * @namespace Jobs
+            * Namespace is used for getting jobs
+            * @namespace jobs
+            * @memberof module:API.cvat
         */
         jobs: {
-            async get(filter = {}) {
+            /**
+                * Method returns list of jobs corresponding to a filter
+                * @method get
+                * @memberof module:API.cvat.jobs
+                * @param {JobFilter} filter job filter
+                * @returns {Job[]}
+            */
+            async get(filter) {
                 const result = await PluginRegistry
                     .apiWrapper(cvat.jobs.get, filter);
                 return result;
             },
         },
         /**
-            * @memberof cvat
-            * @name users
-            * @namespace Users
+            * Namespace is used for getting users
+            * @namespace users
+            * @memberof module:API.cvat
         */
         users: {
+            /**
+                * Method returns list of users corresponding to a filter
+                * @method get
+                * @memberof module:API.cvat.users
+                * @param {UserFilter} [filter={}] user filter
+                * @returns {User[]}
+            */
             async get(filter = {}) {
                 const result = await PluginRegistry
                     .apiWrapper(cvat.users.get, filter);
@@ -211,9 +230,9 @@
             },
         },
         /**
-            * @memberof cvat
-            * @name jobs
-            * @namespace Plugins
+            * Namespace is used for plugin management
+            * @namespace plugins
+            * @memberof module:API.cvat
         */
         plugins: {
             async list() {

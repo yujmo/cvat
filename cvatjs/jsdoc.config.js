@@ -13,9 +13,9 @@ module.exports = {
     "templates": {
         "cleverLinks": false,
         "monospaceLinks": false,
-        "default": {
-            "outputSourceFiles": false
-        },
+//        "default": {
+//            "outputSourceFiles": false
+//        },
     }
 }
 

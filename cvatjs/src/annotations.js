@@ -48,6 +48,9 @@
         }
     }
 
+    /**
+        * Class representing a job
+    */
     class Job extends Base {
         constructor(initialData) {
             super();
@@ -72,6 +75,9 @@
         }
     }
 
+    /**
+        * Class representing a task
+    */
     class Task extends Base {
         constructor(initialData = {}) {
             super();

@@ -4,6 +4,10 @@
 */
 
 (() => {
+    /**
+        * Class representing a user
+        * @name User
+    */
     class User {
         constructor(initialData = {}) {
             this.id = null;
