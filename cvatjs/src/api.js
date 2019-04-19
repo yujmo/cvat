@@ -318,7 +318,13 @@
         */
         client: {
             /**
+                * Format <b>{major}.{minor}.{patch}</b>
+                * <p> <li> A major number is changed after an API becomes
+                * incompatible with a previous version
+                * <p> <li> A minor number is changed after an API expands
+                * <p> <li> A patch number is changed after an each build
                 * @property {string} version client version
+                * @memberof module:API.cvat.client
             */
             version: `${pjson.version}`,
         },
