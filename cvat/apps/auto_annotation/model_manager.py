@@ -16,7 +16,6 @@ from django.conf import settings
 
 from cvat.apps.engine.log import slogger
 from cvat.apps.engine.models import Task as TaskModel
-from cvat.apps.engine import annotation
 from cvat.apps.engine.serializers import LabeledDataSerializer
 from cvat.apps.engine.annotation import put_task_data, patch_task_data
 
@@ -339,7 +338,7 @@ def _run_inference_engine_annotation(data, model_file, weights_file,
 
     return result
 
-def run_inference_thread(tid, model_file, weights_file, labels_mapping, attributes, convertation_file, reset):
+def run_inference_thread(tid, model_file, weights_file, labels_mapping, attributes, convertation_file, reset, user):
     def update_progress(job, progress):
         job.refresh()
         if "cancel" in job.meta:
@@ -376,9 +375,9 @@ def run_inference_thread(tid, model_file, weights_file, labels_mapping, attribut
         serializer = LabeledDataSerializer(data = result)
         if serializer.is_valid(raise_exception=True):
             if reset:
-                put_task_data(tid, result)
+                put_task_data(tid, user, result)
             else:
-                patch_task_data(tid, result, "create")
+                patch_task_data(tid, user, result, "create")
 
         slogger.glob.info("auto annotation for task {} done".format(tid))
     except Exception as e:

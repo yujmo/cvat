@@ -216,7 +216,7 @@ class Git:
 
 
     # Method prepares an annotation, merges diffs and pushes it to remote repository to user branch
-    def push(self, scheme, host, db_task, last_save):
+    def push(self, user, scheme, host, db_task, last_save):
         # Update local repository
         self._pull()
 
@@ -252,7 +252,14 @@ class Git:
         timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
         dump_name = os.path.join(db_task.get_task_dirname(),
             "git_annotation_{}.".format(timestamp) + "dump")
-        dump_task_data(self._tid, dump_name, scheme, host, {})
+        dump_task_data(
+            pk=self._tid,
+            user=user,
+            file_path=dump_name,
+            scheme=scheme,
+            host=host,
+            query_params={},
+        )
 
         ext = os.path.splitext(self._path)[1]
         if ext == '.zip':
@@ -360,7 +367,7 @@ def push(tid, user, scheme, host):
         try:
             _git = Git(db_git, tid, user)
             _git.init_repos()
-            _git.push(scheme, host, db_task, db_task.updated_date)
+            _git.push(user, scheme, host, db_task, db_task.updated_date)
 
             # Update timestamp
             db_git.sync_date = db_task.updated_date
@@ -419,7 +426,7 @@ def update_states():
             slogger.glob("Exception occured during a status updating for db_git with tid: {}".format(db_git.task_id))
 
 @transaction.atomic
-def _onsave(jid, data, action):
+def _onsave(jid, user, data, action):
     db_task = Job.objects.select_related('segment__task').get(pk = jid).segment.task
     try:
         db_git = GitData.objects.select_for_update().get(pk = db_task.id)
@@ -461,7 +468,7 @@ def _onsave(jid, data, action):
     except GitData.DoesNotExist:
         pass
 
-def _ondump(tid, data_format, scheme, host, plugin_meta_data):
+def _ondump(tid, user, data_format, scheme, host, plugin_meta_data):
     db_task = Task.objects.get(pk = tid)
     try:
         db_git = GitData.objects.get(pk = db_task)

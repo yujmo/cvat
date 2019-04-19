@@ -6,7 +6,6 @@
 import os
 import sys
 import rq
-import shlex
 import shutil
 import tempfile
 import numpy as np
@@ -19,16 +18,12 @@ _SCRIPT_DIR = os.path.realpath(os.path.dirname(__file__))
 _MEDIA_MIMETYPES_FILE = os.path.join(_SCRIPT_DIR, "media.mimetypes")
 mimetypes.init(files=[_MEDIA_MIMETYPES_FILE])
 
-from cvat.apps.engine.models import StatusChoice
-from cvat.apps.engine.plugins import plugin_decorator
-
 import django_rq
 from django.conf import settings
 from django.db import transaction
 from ffmpy import FFmpeg
 from pyunpack import Archive
 from distutils.dir_util import copy_tree
-from collections import OrderedDict
 
 from . import models
 from .log import slogger
@@ -43,12 +38,11 @@ def create(tid, data):
 
 @transaction.atomic
 def rq_handler(job, exc_type, exc_value, traceback):
-    tid = job.id.split('/')[-1]
+    splitted = job.id.split('/')
+    tid = int(splitted[splitted.index('tasks') + 1])
     db_task = models.Task.objects.select_for_update().get(pk=tid)
     with open(db_task.get_log_path(), "wt") as log_file:
         print_exception(exc_type, exc_value, traceback, file=log_file)
-    db_task.delete()
-
     return False
 
 ############################# Internal implementation for server API

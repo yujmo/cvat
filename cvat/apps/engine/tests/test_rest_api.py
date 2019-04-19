@@ -7,7 +7,6 @@ import shutil
 from PIL import Image
 from io import BytesIO
 import random
-import django_rq
 from rest_framework.test import APITestCase, APIClient
 from rest_framework import status
 from django.conf import settings
@@ -134,7 +133,7 @@ class ForceLogin:
 
         return self
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, exception_type, exception_value, traceback):
         if self.user:
             self.client.logout()
 
@@ -341,10 +340,12 @@ class ServerExceptionAPITestCase(APITestCase):
             "stack": ""
         }
 
-    @mock.patch("cvat.apps.engine.views.clogger")
-    def _run_api_v1_server_exception(self, user, clogger):
+    def _run_api_v1_server_exception(self, user):
         with ForceLogin(user, self.client):
-            response = self.client.post('/api/v1/server/exception', self.data, format='json')
+            #pylint: disable=unused-variable
+            with mock.patch("cvat.apps.engine.views.clogger") as clogger:
+                response = self.client.post('/api/v1/server/exception',
+                    self.data, format='json')
 
         return response
 
@@ -387,10 +388,12 @@ class ServerLogsAPITestCase(APITestCase):
             "is_active": True,
         }]
 
-    @mock.patch("cvat.apps.engine.views.clogger")
-    def _run_api_v1_server_logs(self, user, clogger):
+    def _run_api_v1_server_logs(self, user):
         with ForceLogin(user, self.client):
-            response = self.client.post('/api/v1/server/logs', self.data, format='json')
+            #pylint: disable=unused-variable
+            with mock.patch("cvat.apps.engine.views.clogger") as clogger:
+                response = self.client.post('/api/v1/server/logs',
+                    self.data, format='json')
 
         return response
 
@@ -479,9 +482,9 @@ class UserGetAPITestCase(APITestCase):
     def setUpTestData(cls):
         create_db_users(cls)
 
-    def _run_api_v1_users_id(self, user, id):
+    def _run_api_v1_users_id(self, user, user_id):
         with ForceLogin(user, self.client):
-            response = self.client.get('/api/v1/users/{}'.format(id))
+            response = self.client.get('/api/v1/users/{}'.format(user_id))
 
         return response
 
@@ -523,9 +526,9 @@ class UserUpdateAPITestCase(APITestCase):
         self.client = APIClient()
         create_db_users(self)
 
-    def _run_api_v1_users_id(self, user, id, data):
+    def _run_api_v1_users_id(self, user, user_id, data):
         with ForceLogin(user, self.client):
-            response = self.client.put('/api/v1/users/{}'.format(id), data=data)
+            response = self.client.put('/api/v1/users/{}'.format(user_id), data=data)
 
         return response
 
@@ -558,9 +561,9 @@ class UserUpdateAPITestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
 class UserPartialUpdateAPITestCase(UserUpdateAPITestCase):
-    def _run_api_v1_users_id(self, user, id, data):
+    def _run_api_v1_users_id(self, user, user_id, data):
         with ForceLogin(user, self.client):
-            response = self.client.patch('/api/v1/users/{}'.format(id), data=data)
+            response = self.client.patch('/api/v1/users/{}'.format(user_id), data=data)
 
         return response
 
@@ -1124,10 +1127,10 @@ class TaskDataAPITestCase(APITestCase):
         response = self._create_task(None, data)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-def compare_objects(self, obj1, obj2, ignore_keys=[]):
+def compare_objects(self, obj1, obj2, ignore_keys):
     if isinstance(obj1, dict):
         self.assertTrue(isinstance(obj2, dict), "{} != {}".format(obj1, obj2))
-        for k, v in obj1.items():
+        for k in obj1.keys():
             if k in ignore_keys:
                 continue
             compare_objects(self, obj1[k], obj2.get(k), ignore_keys)
@@ -1254,7 +1257,7 @@ class JobAnnotationAPITestCase(APITestCase):
         self.assertEqual(response.status_code, HTTP_200_OK)
 
         data = {
-            "version": 0,
+            "version": 1,
             "tags": [
                 {
                     "frame": 0,
@@ -1345,6 +1348,7 @@ class JobAnnotationAPITestCase(APITestCase):
             ]
         }
         response = self._put_api_v1_jobs_id_data(job["id"], annotator, data)
+        data["version"] += 1 # need to update the version
         self.assertEqual(response.status_code, HTTP_200_OK)
         self._check_response(response, data)
 
@@ -1353,10 +1357,11 @@ class JobAnnotationAPITestCase(APITestCase):
         self._check_response(response, data)
 
         response = self._delete_api_v1_jobs_id_data(job["id"], annotator)
+        data["version"] += 1 # need to update the version
         self.assertEqual(response.status_code, HTTP_204_NO_CONTENT)
 
         data = {
-            "version": 0,
+            "version": data["version"],
             "tags": [],
             "shapes": [],
             "tracks": []
@@ -1366,7 +1371,7 @@ class JobAnnotationAPITestCase(APITestCase):
         self._check_response(response, data)
 
         data = {
-            "version": 0,
+            "version": data["version"],
             "tags": [
                 {
                     "frame": 0,
@@ -1458,6 +1463,7 @@ class JobAnnotationAPITestCase(APITestCase):
         }
         response = self._patch_api_v1_jobs_id_data(job["id"], annotator,
             "create", data)
+        data["version"] += 1
         self.assertEqual(response.status_code, HTTP_200_OK)
         self._check_response(response, data)
 
@@ -1476,6 +1482,7 @@ class JobAnnotationAPITestCase(APITestCase):
 
         response = self._patch_api_v1_jobs_id_data(job["id"], annotator,
             "update", data)
+        data["version"] = data.get("version", 0) + 1 # need to update the version
         self.assertEqual(response.status_code, HTTP_200_OK)
         self._check_response(response, data)
 
@@ -1485,11 +1492,12 @@ class JobAnnotationAPITestCase(APITestCase):
 
         response = self._patch_api_v1_jobs_id_data(job["id"], annotator,
             "delete", data)
+        data["version"] += 1 # need to update the version
         self.assertEqual(response.status_code, HTTP_200_OK)
         self._check_response(response, data)
 
         data = {
-            "version": 0,
+            "version": data["version"],
             "tags": [],
             "shapes": [],
             "tracks": []
@@ -1499,7 +1507,7 @@ class JobAnnotationAPITestCase(APITestCase):
         self._check_response(response, data)
 
         data = {
-            "version": 0,
+            "version": data["version"],
             "tags": [
                 {
                     "frame": 0,
@@ -1666,10 +1674,11 @@ class TaskAnnotationAPITestCase(JobAnnotationAPITestCase):
             "tracks": []
         }
         response = self._put_api_v1_tasks_id_annotations(task["id"], annotator, data)
+        data["version"] += 1
         self.assertEqual(response.status_code, HTTP_200_OK)
 
         data = {
-            "version": 0,
+            "version": data["version"],
             "tags": [
                 {
                     "frame": 0,
@@ -1760,6 +1769,7 @@ class TaskAnnotationAPITestCase(JobAnnotationAPITestCase):
             ]
         }
         response = self._put_api_v1_tasks_id_annotations(task["id"], annotator, data)
+        data["version"] += 1
         self.assertEqual(response.status_code, HTTP_200_OK)
         self._check_response(response, data)
 
@@ -1768,10 +1778,11 @@ class TaskAnnotationAPITestCase(JobAnnotationAPITestCase):
         self._check_response(response, data)
 
         response = self._delete_api_v1_tasks_id_annotations(task["id"], annotator)
+        data["version"] += 1
         self.assertEqual(response.status_code, HTTP_204_NO_CONTENT)
 
         data = {
-            "version": 0,
+            "version": data["version"],
             "tags": [],
             "shapes": [],
             "tracks": []
@@ -1781,7 +1792,7 @@ class TaskAnnotationAPITestCase(JobAnnotationAPITestCase):
         self._check_response(response, data)
 
         data = {
-            "version": 0,
+            "version": data["version"],
             "tags": [
                 {
                     "frame": 0,
@@ -1873,6 +1884,7 @@ class TaskAnnotationAPITestCase(JobAnnotationAPITestCase):
         }
         response = self._patch_api_v1_tasks_id_annotations(task["id"], annotator,
             "create", data)
+        data["version"] += 1
         self.assertEqual(response.status_code, HTTP_200_OK)
         self._check_response(response, data)
 
@@ -1891,6 +1903,7 @@ class TaskAnnotationAPITestCase(JobAnnotationAPITestCase):
 
         response = self._patch_api_v1_tasks_id_annotations(task["id"], annotator,
             "update", data)
+        data["version"] = data.get("version", 0) + 1
         self.assertEqual(response.status_code, HTTP_200_OK)
         self._check_response(response, data)
 
@@ -1900,11 +1913,12 @@ class TaskAnnotationAPITestCase(JobAnnotationAPITestCase):
 
         response = self._patch_api_v1_tasks_id_annotations(task["id"], annotator,
             "delete", data)
+        data["version"] += 1
         self.assertEqual(response.status_code, HTTP_200_OK)
         self._check_response(response, data)
 
         data = {
-            "version": 0,
+            "version": data["version"],
             "tags": [],
             "shapes": [],
             "tracks": []
@@ -1914,7 +1928,7 @@ class TaskAnnotationAPITestCase(JobAnnotationAPITestCase):
         self._check_response(response, data)
 
         data = {
-            "version": 0,
+            "version": data["version"],
             "tags": [
                 {
                     "frame": 0,
@@ -2112,8 +2126,12 @@ class ServerShareAPITestCase(APITestCase):
 
         response = self._run_api_v1_server_share(user, "/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        compare_objects(self, sorted(data, key=lambda d: d["name"]),
-            sorted(response.data, key=lambda d: d["name"]))
+        compare_objects(
+            self=self,
+            obj1=sorted(data, key=lambda d: d["name"]),
+            obj2=sorted(response.data, key=lambda d: d["name"]),
+            ignore_keys=[]
+        )
 
         data = [
             {"name": "file1.txt", "type": "REG"},
@@ -2121,22 +2139,34 @@ class ServerShareAPITestCase(APITestCase):
         ]
         response = self._run_api_v1_server_share(user, "/test1")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        compare_objects(self, sorted(data, key=lambda d: d["name"]),
-            sorted(response.data, key=lambda d: d["name"]))
+        compare_objects(
+            self=self,
+            obj1=sorted(data, key=lambda d: d["name"]),
+            obj2=sorted(response.data, key=lambda d: d["name"]),
+            ignore_keys=[]
+        )
 
         data = []
         response = self._run_api_v1_server_share(user, "/test1/test3")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        compare_objects(self, sorted(data, key=lambda d: d["name"]),
-            sorted(response.data, key=lambda d: d["name"]))
+        compare_objects(
+            self=self,
+            obj1=sorted(data, key=lambda d: d["name"]),
+            obj2=sorted(response.data, key=lambda d: d["name"]),
+            ignore_keys=[]
+        )
 
         data = [
             {"name": "file2.txt", "type": "REG"},
         ]
         response = self._run_api_v1_server_share(user, "/test2")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        compare_objects(self, sorted(data, key=lambda d: d["name"]),
-            sorted(response.data, key=lambda d: d["name"]))
+        compare_objects(
+            self=self,
+            obj1=sorted(data, key=lambda d: d["name"]),
+            obj2=sorted(response.data, key=lambda d: d["name"]),
+            ignore_keys=[]
+        )
 
         response = self._run_api_v1_server_share(user, "/test4")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

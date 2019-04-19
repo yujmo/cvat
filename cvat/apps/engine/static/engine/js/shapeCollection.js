@@ -173,8 +173,8 @@ class ShapeCollectionModel extends Listener {
     }
 
     cleanupClientObjects() {
-        for (let shape of this._shapes) {
-            if (typeof(shape.serverID) === 'undefined') {
+        for (const shape of this._shapes) {
+            if (typeof (shape.serverID) === 'undefined') {
                 shape.removed = true;
             }
         }
@@ -211,10 +211,10 @@ class ShapeCollectionModel extends Listener {
 
     updateGroupIdx(groupId) {
         if (groupId in this._groups) {
-            let newGroupId = this._nextGroupIdx();
+            const newGroupId = this._nextGroupIdx();
             this._groups[newGroupId] = this._groups[groupId];
             delete this._groups[groupId];
-            for (let elem of this._groups[newGroupId]) {
+            for (const elem of this._groups[newGroupId]) {
                 elem.groupId = newGroupId;
             }
         }
@@ -230,7 +230,7 @@ class ShapeCollectionModel extends Listener {
                 Object.assign(shape, window.cvat.translate.points.serverToClient(shape));
             }
 
-            for (let attr of shape.attributes) {
+            for (const attr of shape.attributes) {
                 attr.id = attr.spec_id;
                 delete attr.spec_id;
             }
@@ -239,15 +239,15 @@ class ShapeCollectionModel extends Listener {
         // Make copy of data in order to don't affect original data
         data = JSON.parse(JSON.stringify(data));
 
-        for (let imported of data.shapes.concat(data.tracks)) {
+        for (const imported of data.shapes.concat(data.tracks)) {
             // Conversion from client object format to server object format
             if (imported.shapes) {
-                for (let attr of imported.attributes) {
+                for (const attr of imported.attributes) {
                     attr.id = attr.spec_id;
                     delete attr.spec_id;
                 }
 
-                for (let shape of imported.shapes) {
+                for (const shape of imported.shapes) {
                     _convertShape(shape);
                 }
                 this.add(imported, `interpolation_${imported.shapes[0].type}`);
@@ -274,7 +274,7 @@ class ShapeCollectionModel extends Listener {
                 Object.assign(shape, window.cvat.translate.points.clientToServer(shape));
             }
 
-            for (let attr of shape.attributes) {
+            for (const attr of shape.attributes) {
                 attr.spec_id = attr.id;
                 delete attr.id;
             }
@@ -282,7 +282,7 @@ class ShapeCollectionModel extends Listener {
 
         const data = {
             shapes: [],
-            tracks: []
+            tracks: [],
         };
 
         const mapping = [];

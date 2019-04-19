@@ -6,17 +6,14 @@ import os
 import copy
 from enum import Enum
 from django.utils import timezone
-from collections import OrderedDict
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 from collections import OrderedDict
-from distutils.util import strtobool
 from xml.sax.saxutils import XMLGenerator
 from abc import ABCMeta, abstractmethod
 from PIL import Image
 from shapely import geometry
 
-import django_rq
 from django.conf import settings
 from django.db import transaction
 
@@ -41,26 +38,25 @@ class PatchAction(str, Enum):
 
 @silk_profile(name="GET job data")
 @transaction.atomic
-def get_job_data(pk):
-    annotation = JobAnnotation(pk)
+def get_job_data(pk, user):
+    annotation = JobAnnotation(pk, user)
     annotation.init_from_db()
 
     return annotation.data
 
 @silk_profile(name="POST job data")
 @transaction.atomic
-def put_job_data(pk, data):
-    annotation = JobAnnotation(pk)
-    annotation.delete()
-    annotation.create(data)
+def put_job_data(pk, user, data):
+    annotation = JobAnnotation(pk, user)
+    annotation.put(data)
 
     return annotation.data
 
 @silk_profile(name="UPDATE job data")
 @plugin_decorator
 @transaction.atomic
-def patch_job_data(pk, data, action):
-    annotation = JobAnnotation(pk)
+def patch_job_data(pk, user, data, action):
+    annotation = JobAnnotation(pk, user)
     if action == PatchAction.CREATE:
         annotation.create(data)
     elif action == PatchAction.UPDATE:
@@ -72,31 +68,30 @@ def patch_job_data(pk, data, action):
 
 @silk_profile(name="DELETE job data")
 @transaction.atomic
-def delete_job_data(pk):
-    annotation = JobAnnotation(pk)
+def delete_job_data(pk, user):
+    annotation = JobAnnotation(pk, user)
     annotation.delete()
 
 @silk_profile(name="GET task data")
 @transaction.atomic
-def get_task_data(pk):
-    annotation = TaskAnnotation(pk)
+def get_task_data(pk, user):
+    annotation = TaskAnnotation(pk, user)
     annotation.init_from_db()
 
     return annotation.data
 
 @silk_profile(name="POST task data")
 @transaction.atomic
-def put_task_data(pk, data):
-    annotation = TaskAnnotation(pk)
-    annotation.delete()
-    annotation.create(data)
+def put_task_data(pk, user, data):
+    annotation = TaskAnnotation(pk, user)
+    annotation.put(data)
 
     return annotation.data
 
 @silk_profile(name="UPDATE task data")
 @transaction.atomic
-def patch_task_data(pk, data, action):
-    annotation = TaskAnnotation(pk)
+def patch_task_data(pk, user, data, action):
+    annotation = TaskAnnotation(pk, user)
     if action == PatchAction.CREATE:
         annotation.create(data)
     elif action == PatchAction.UPDATE:
@@ -108,26 +103,26 @@ def patch_task_data(pk, data, action):
 
 @silk_profile(name="DELETE task data")
 @transaction.atomic
-def delete_task_data(pk):
-    annotation = TaskAnnotation(pk)
+def delete_task_data(pk, user):
+    annotation = TaskAnnotation(pk, user)
     annotation.delete()
 
 
-def dump_task_data(pk, file_path, scheme, host, query_params):
+def dump_task_data(pk, user, file_path, scheme, host, query_params):
     # For big tasks dump function may run for a long time and
     # we dont need to acquire lock after _AnnotationForTask instance
     # has been initialized from DB.
     # But there is the bug with corrupted dump file in case 2 or more dump request received at the same time.
     # https://github.com/opencv/cvat/issues/217
     with transaction.atomic():
-        annotation = TaskAnnotation(pk)
+        annotation = TaskAnnotation(pk, user)
         annotation.init_from_db()
 
     annotation.dump(file_path, scheme, host, query_params)
 
 ######
 
-def bulk_create(db_model, objects, flt_param = {}):
+def bulk_create(db_model, objects, flt_param):
     if objects:
         if flt_param:
             if 'postgresql' in settings.DATABASES["default"]["ENGINE"]:
@@ -168,7 +163,7 @@ def _merge_table_rows(rows, keys_for_merge, field_id):
 
         for key in keys_for_merge:
             item = dotdict({v.split('__', 1)[-1]:row[v] for v in keys_for_merge[key]})
-            if item.id:
+            if item.id is not None:
                 merged_rows[row_id][key].append(item)
 
     # Remove redundant keys from final objects
@@ -180,7 +175,8 @@ def _merge_table_rows(rows, keys_for_merge, field_id):
     return list(merged_rows.values())
 
 class JobAnnotation:
-    def __init__(self, pk):
+    def __init__(self, pk, user):
+        self.user = user
         self.db_job = models.Job.objects.select_related('segment__task') \
             .select_for_update().get(id=pk)
 
@@ -246,23 +242,37 @@ class JobAnnotation:
             track["attributes"] = track_attributes
             track["shapes"] = shapes
 
-        db_tracks = bulk_create(models.LabeledTrack, db_tracks,
-            {"job_id": self.db_job.id})
+        db_tracks = bulk_create(
+            db_model=models.LabeledTrack,
+            objects=db_tracks,
+            flt_param={"job_id": self.db_job.id}
+        )
 
         for db_attrval in db_track_attrvals:
             db_attrval.track_id = db_tracks[db_attrval.track_id].id
-        bulk_create(models.LabeledTrackAttributeVal, db_track_attrvals)
+        bulk_create(
+            db_model=models.LabeledTrackAttributeVal,
+            objects=db_track_attrvals,
+            flt_param={}
+        )
 
         for db_shape in db_shapes:
             db_shape.track_id = db_tracks[db_shape.track_id].id
 
-        db_shapes = bulk_create(models.TrackedShape, db_shapes,
-            {"track__job_id": self.db_job.id})
+        db_shapes = bulk_create(
+            db_model=models.TrackedShape,
+            objects=db_shapes,
+            flt_param={"track__job_id": self.db_job.id}
+        )
 
         for db_attrval in db_shape_attrvals:
             db_attrval.shape_id = db_shapes[db_attrval.shape_id].id
 
-        bulk_create(models.TrackedShapeAttributeVal, db_shape_attrvals)
+        bulk_create(
+            db_model=models.TrackedShapeAttributeVal,
+            objects=db_shape_attrvals,
+            flt_param={}
+        )
 
         shape_idx = 0
         for track, db_track in zip(tracks, db_tracks):
@@ -295,13 +305,20 @@ class JobAnnotation:
             db_shapes.append(db_shape)
             shape["attributes"] = attributes
 
-        db_shapes = bulk_create(models.LabeledShape, db_shapes,
-            {"job_id": self.db_job.id})
+        db_shapes = bulk_create(
+            db_model=models.LabeledShape,
+            objects=db_shapes,
+            flt_param={"job_id": self.db_job.id}
+        )
 
         for db_attrval in db_attrvals:
             db_attrval.shape_id = db_shapes[db_attrval.shape_id].id
 
-        bulk_create(models.LabeledShapeAttributeVal, db_attrvals)
+        bulk_create(
+            db_model=models.LabeledShapeAttributeVal,
+            objects=db_attrvals,
+            flt_param={}
+        )
 
         for shape, db_shape in zip(shapes, db_shapes):
             shape["id"] = db_shape.id
@@ -328,18 +345,38 @@ class JobAnnotation:
             db_tags.append(db_tag)
             tag["attributes"] = attributes
 
-        db_tags = bulk_create(models.LabeledImage, db_tags,
-            {"job_id": self.db_job.id})
+        db_tags = bulk_create(
+            db_model=models.LabeledImage,
+            objects=db_tags,
+            flt_param={"job_id": self.db_job.id}
+        )
 
         for db_attrval in db_attrvals:
             db_attrval.tag_id = db_tags[db_attrval.tag_id].id
 
-        bulk_create(models.LabeledImageAttributeVal, db_attrvals)
+        bulk_create(
+            db_model=models.LabeledImageAttributeVal,
+            objects=db_attrvals,
+            flt_param={}
+        )
 
         for tag, db_tag in zip(tags, db_tags):
             tag["id"] = db_tag.id
 
         self.data["tags"] = tags
+
+    def _commit(self):
+        db_prev_commit = self.db_job.commits.last()
+        db_curr_commit = models.JobCommit()
+        if db_prev_commit:
+            db_curr_commit.version = db_prev_commit.version + 1
+        else:
+            db_curr_commit.version = 1
+        db_curr_commit.job = self.db_job
+        db_curr_commit.message = "Changes: tags - {}; shapes - {}; tracks - {}".format(
+            len(self.data["tags"]), len(self.data["shapes"]), len(self.data["tracks"]))
+        db_curr_commit.save()
+        self.data["version"] = db_curr_commit.version
 
     def _save_to_db(self, data):
         self.reset()
@@ -349,18 +386,28 @@ class JobAnnotation:
 
         return self.data["tags"] or self.data["shapes"] or self.data["tracks"]
 
-    def create(self, data):
+    def _create(self, data):
         if self._save_to_db(data):
             db_task = self.db_job.segment.task
             db_task.updated_date = timezone.now()
             db_task.save()
             self.db_job.save()
 
-    def update(self, data):
-        self.delete(data)
-        self.create(data)
+    def create(self, data):
+        self._create(data)
+        self._commit()
 
-    def delete(self, data=None):
+    def put(self, data):
+        self._delete()
+        self._create(data)
+        self._commit()
+
+    def update(self, data):
+        self._delete(data)
+        self._create(data)
+        self._commit()
+
+    def _delete(self, data=None):
         if data is None:
             self.db_job.labeledimage_set.all().delete()
             self.db_job.labeledshape_set.all().delete()
@@ -384,6 +431,10 @@ class JobAnnotation:
             labeledimage_set.delete()
             labeledshape_set.delete()
             labeledtrack_set.delete()
+
+    def delete(self, data=None):
+        self._delete(data)
+        self._commit()
 
     def _init_tags_from_db(self):
         db_tags = self.db_job.labeledimage_set.prefetch_related(
@@ -503,13 +554,29 @@ class JobAnnotation:
                 ]
             }, 'id')
 
+            # A result table can consist many equal rows for track/shape attributes
+            # We need filter unique attributes manually
+            db_track["labeledtrackattributeval_set"] = list(set(db_track["labeledtrackattributeval_set"]))
+            for db_shape in db_track["trackedshape_set"]:
+                db_shape["trackedshapeattributeval_set"] = list(
+                    set(db_shape["trackedshapeattributeval_set"])
+                )
+
         serializer = serializers.LabeledTrackSerializer(db_tracks, many=True)
         self.data["tracks"] = serializer.data
+
+    def _init_version_from_db(self):
+        db_commit = self.db_job.commits.last()
+        if db_commit:
+            self.data["version"] = db_commit.version
+        else:
+            self.data["version"] = 0
 
     def init_from_db(self):
         self._init_tags_from_db()
         self._init_shapes_from_db()
         self._init_tracks_from_db()
+        self._init_version_from_db()
 
 class AnnotationWriter:
     __metaclass__ = ABCMeta
@@ -614,7 +681,7 @@ class XmlAnnotationWriter(AnnotationWriter):
                 self._add_meta(v)
                 self._indent()
                 self.xmlgen.endElement(k)
-            elif type(v) == list:
+            elif isinstance(v, list):
                 self._indent()
                 self.xmlgen.startElement(k, {})
                 for tup in v:
@@ -784,6 +851,9 @@ class ObjectManager:
 
         # Nothing to merge here. Just add all int_objects if any.
         if not old_objects_by_frame or not int_objects_by_frame:
+            for frame in old_objects_by_frame:
+                for old_obj in old_objects_by_frame[frame]:
+                    self._modify_unmached_object(old_obj, start_frame + overlap)
             self.objects.extend(int_objects)
             return
 
@@ -795,7 +865,7 @@ class ObjectManager:
             if frame in old_objects_by_frame:
                 int_objects = int_objects_by_frame[frame]
                 old_objects = old_objects_by_frame[frame]
-                cost_matrix = np.empty(obj=(len(int_objects), len(old_objects)),
+                cost_matrix = np.empty(shape=(len(int_objects), len(old_objects)),
                     dtype=float)
                 # 5.1 Construct cost matrix for the frame.
                 for i, int_obj in enumerate(int_objects):
@@ -813,7 +883,7 @@ class ObjectManager:
                     if cost_matrix[i][j] <= min_cost_thresh:
                         old_objects[j] = self._unite_objects(int_objects[i], old_objects[j])
                         int_objects_indexes[i] = -1
-                        int_objects_indexes[j] = -1
+                        old_objects_indexes[j] = -1
 
                 # 7. Add all new objects which were not processed.
                 for i in int_objects_indexes:
@@ -833,7 +903,7 @@ class ObjectManager:
 class TagManager(ObjectManager):
     @staticmethod
     def _get_cost_threshold():
-        raise 0.25
+        return 0.25
 
     @staticmethod
     def _calc_objects_similarity(obj0, obj1, start_frame, overlap):
@@ -860,8 +930,9 @@ class ShapeManager(ObjectManager):
             shape0 = copy.copy(shape)
             shape0["keyframe"] = True
             shape0["outside"] = False
+            # TODO: Separate attributes on mutable and unmutable
+            shape0["attributes"] = []
             shape0.pop("group", None)
-            shape0.pop("attributes")
             shape1 = copy.copy(shape0)
             shape1["outside"] = True
             shape1["frame"] += 1
@@ -879,7 +950,7 @@ class ShapeManager(ObjectManager):
 
     @staticmethod
     def _get_cost_threshold():
-        raise 0.25
+        return 0.25
 
     @staticmethod
     def _calc_objects_similarity(obj0, obj1, start_frame, overlap):
@@ -888,18 +959,18 @@ class ShapeManager(ObjectManager):
             return overlap_area / (p0.area + p1.area - overlap_area)
 
         has_same_type  = obj0["type"] == obj1["type"]
-        has_same_label = obj0["label_id"] == obj1["label_id"]
+        has_same_label = obj0.get("label_id") == obj1.get("label_id")
         if has_same_type and has_same_label:
             if obj0["type"] == models.ShapeType.RECTANGLE:
                 p0 = geometry.box(*obj0["points"])
                 p1 = geometry.box(*obj1["points"])
 
-                return self._calc_polygons_similarity(p0, p1)
+                return _calc_polygons_similarity(p0, p1)
             elif obj0["type"] == models.ShapeType.POLYGON:
                 p0 = geometry.Polygon(pairwise(obj0["points"]))
                 p1 = geometry.Polygon(pairwise(obj0["points"]))
 
-                return self._calc_polygons_similarity(p0, p1)
+                return _calc_polygons_similarity(p0, p1)
             else:
                 return 0 # FIXME: need some similarity for points and polylines
         return 0
@@ -917,7 +988,7 @@ class TrackManager(ObjectManager):
     def to_shapes(self, end_frame):
         shapes = []
         for track in self.objects:
-            for shape in self.get_interpolated_shapes(track, 0, end_frame):
+            for shape in TrackManager.get_interpolated_shapes(track, 0, end_frame):
                 if not shape["outside"]:
                     shape.pop("outside")
                     shape.pop("keyframe", None)
@@ -935,7 +1006,7 @@ class TrackManager(ObjectManager):
         objects_by_frame = {0: []}
         for obj in objects:
             shape = obj["shapes"][-1] # optimization for old tracks
-            if shape["frame"] >= start_frame or shape["outside"]:
+            if shape["frame"] >= start_frame or not shape["outside"]:
                 objects_by_frame[0].append(obj)
 
         if not objects_by_frame[0]:
@@ -945,7 +1016,7 @@ class TrackManager(ObjectManager):
 
     @staticmethod
     def _get_cost_threshold():
-        raise 0.5
+        return 0.5
 
     @staticmethod
     def _calc_objects_similarity(obj0, obj1, start_frame, overlap):
@@ -954,8 +1025,8 @@ class TrackManager(ObjectManager):
             # and stop_frame is the stop frame of current segment
             # end_frame == stop_frame + 1
             end_frame = start_frame + overlap
-            obj0_shapes = self.get_interpolated_shapes(obj0, start_frame, end_frame)
-            obj1_shapes = self.get_interpolated_shapes(obj1, start_frame, end_frame)
+            obj0_shapes = TrackManager.get_interpolated_shapes(obj0, start_frame, end_frame)
+            obj1_shapes = TrackManager.get_interpolated_shapes(obj1, start_frame, end_frame)
             obj0_shapes_by_frame = {shape["frame"]:shape for shape in obj0_shapes}
             obj1_shapes_by_frame = {shape["frame"]:shape for shape in obj1_shapes}
             assert obj0_shapes_by_frame and obj1_shapes_by_frame
@@ -968,7 +1039,7 @@ class TrackManager(ObjectManager):
                     if shape0["outside"] != shape1["outside"]:
                         error += 1
                     else:
-                        error += 1 - ShapeManager._calc_objects_similarity(shape0, shape1)
+                        error += 1 - ShapeManager._calc_objects_similarity(shape0, shape1, start_frame, overlap)
                     count += 1
                 elif shape0 or shape1:
                     error += 1
@@ -992,8 +1063,8 @@ class TrackManager(ObjectManager):
         points = np.asarray(shape["points"]).reshape(-1, 2)
         broken_line = geometry.LineString(points)
         points = []
-        for off in range(0, 1, 0.01):
-            p = broken_line.interpolate(off, True)
+        for off in range(0, 100, 1):
+            p = broken_line.interpolate(off / 100, True)
             points.append(p.x)
             points.append(p.y)
 
@@ -1008,18 +1079,20 @@ class TrackManager(ObjectManager):
             shapes = []
             is_same_type = shape0["type"] == shape1["type"]
             is_polygon = shape0["type"] == models.ShapeType.POLYGON
+            is_polyline = shape0["type"] == models.ShapeType.POLYLINE
             is_same_size = len(shape0["points"]) == len(shape1["points"])
-            if not is_same_type or is_polygon or not is_same_size:
-                shape0 = normalize_shape(shape0)
-                shape1 = normalize_shape(shape1)
+            if not is_same_type or is_polygon or is_polyline or not is_same_size:
+                shape0 = TrackManager.normalize_shape(shape0)
+                shape1 = TrackManager.normalize_shape(shape1)
 
             distance = shape1["frame"] - shape0["frame"]
             step = np.subtract(shape1["points"], shape0["points"]) / distance
-            for frame in range(shape0["frame"]+1, shape1["frame"]):
+            for frame in range(shape0["frame"] + 1, shape1["frame"]):
                 off = frame - shape0["frame"]
                 points = shape0["points"] + step * off
                 shape = copy.deepcopy(shape0)
                 broken_line = geometry.LineString(points.reshape(-1, 2)).simplify(0.05, False)
+                shape["keyframe"] = False
                 shape["frame"] = frame
                 shape["points"] = [x for p in broken_line.coords for x in p]
                 shapes.append(shape)
@@ -1031,19 +1104,23 @@ class TrackManager(ObjectManager):
         # TODO: should be return an iterator?
         shapes = []
         curr_frame = track["shapes"][0]["frame"]
+        prev_shape = {}
         for shape in track["shapes"]:
-            if shape["frame"] != curr_frame:
+            if prev_shape:
                 assert shape["frame"] > curr_frame
+                for attr in prev_shape["attributes"]:
+                    if attr["spec_id"] not in map(lambda el: el["spec_id"], shape["attributes"]):
+                        shape["attributes"].append(copy.deepcopy(attr))
                 if not prev_shape["outside"]:
                     shapes.extend(interpolate(prev_shape, shape))
 
-            if not shape["outside"]:
-                shape["keyframe"] = True
-                shapes.append(shape)
-            curr_frame = shape["frame"] + 1
+            shape["keyframe"] = True
+            shapes.append(shape)
+            curr_frame = shape["frame"]
             prev_shape = shape
 
-        if not prev_shape["outside"]:
+        # TODO: Need to modify a client and a database (append "outside" shapes for polytracks)
+        if not prev_shape["outside"] and prev_shape["type"] == models.ShapeType.RECTANGLE:
             shape = copy.copy(prev_shape)
             shape["frame"] = end_frame
             shapes.extend(interpolate(prev_shape, shape))
@@ -1071,7 +1148,8 @@ class TrackManager(ObjectManager):
         return track
 
 class TaskAnnotation:
-    def __init__(self, pk):
+    def __init__(self, pk, user):
+        self.user = user
         self.db_task = models.Task.objects.prefetch_related("image_set").get(id=pk)
         self.db_jobs = models.Job.objects.select_related("segment").filter(segment__task_id=pk)
         self.reset()
@@ -1100,20 +1178,20 @@ class TaskAnnotation:
             }
 
         for jid, job_data in splitted_data.items():
-            # if an item inside _data isn't empty need to call save_job
-            is_non_empty = False
-            for objects in job_data.values():
-                if objects:
-                    is_non_empty = True
-                    break
-
-            if is_non_empty:
-                _data = patch_job_data(jid, job_data, action)
-                self._merge_data(_data, jobs[jid]["start"], self.db_task.overlap)
+            if action is None:
+                _data = put_job_data(jid, self.user, job_data)
+            else:
+                _data = patch_job_data(jid, self.user, job_data, action)
+            if _data["version"] > self.data["version"]:
+                self.data["version"] = _data["version"]
+            self._merge_data(_data, jobs[jid]["start"], self.db_task.overlap)
 
     def _merge_data(self, data, start_frame, overlap):
         data_manager = DataManager(self.data)
         data_manager.merge(data, start_frame, overlap)
+
+    def put(self, data):
+        self._patch_data(data, None)
 
     def create(self, data):
         self._patch_data(data, PatchAction.CREATE)
@@ -1126,14 +1204,16 @@ class TaskAnnotation:
             self._patch_data(data, PatchAction.DELETE)
         else:
             for db_job in self.db_jobs:
-                delete_job_data(db_job.id)
+                delete_job_data(db_job.id, self.user)
 
     def init_from_db(self):
         self.reset()
 
         for db_job in self.db_jobs:
-            annotation = JobAnnotation(db_job.id)
+            annotation = JobAnnotation(db_job.id, self.user)
             annotation.init_from_db()
+            if annotation.data["version"] > self.data["version"]:
+                self.data["version"] = annotation.data["version"]
             db_segment = db_job.segment
             start_frame = db_segment.start_frame
             overlap = self.db_task.overlap
@@ -1359,7 +1439,7 @@ class TaskAnnotation:
                         else:
                             raise NotImplementedError("unknown shape type")
 
-                        for attr in shape.get("attributes", []):
+                        for attr in shape.get("attributes", []) + track.get("attributes", []):
                             db_attribute = db_attribute_by_id[attr["spec_id"]]
                             dumper.add_attribute(OrderedDict([
                                 ("name", db_attribute.name),

@@ -6,7 +6,6 @@
 
 /* global
     LabelsInfo:false
-    AnnotationParser:false
     Listener:false
     PlayerModel:false
 */
@@ -33,41 +32,6 @@ window.cvat = {
     },
     translate: {},
 };
-
-const framesMeta = [
-    {
-        width: 1920,
-        height: 1080,
-    },
-    {
-        width: 1600,
-        height: 859,
-    },
-    {
-        width: 3840,
-        height: 2160,
-    },
-    {
-        width: 2560,
-        height: 1920,
-    },
-    {
-        width: 1920,
-        height: 1080,
-    },
-    {
-        width: 1920,
-        height: 1080,
-    },
-    {
-        width: 700,
-        height: 453,
-    },
-    {
-        width: 1920,
-        height: 1200,
-    },
-];
 
 const taskData = {
     url: 'http://localhost:7000/api/v1/tasks/3',
@@ -325,15 +289,6 @@ const taskData = {
 
 function makeLabelsInfo() {
     return new LabelsInfo(taskData.labels);
-}
-
-function makeAnnotationParser() {
-    return new AnnotationParser({
-        start: jobData.start,
-        stop: jobData.stop,
-        flipped: taskData.flipped,
-        image_meta_data: framesMeta,
-    }, makeLabelsInfo());
 }
 
 function makePlayerModel() {

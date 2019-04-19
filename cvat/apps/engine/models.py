@@ -5,10 +5,7 @@
 from enum import Enum
 
 import shlex
-import csv
 import os
-import sys
-import re
 
 from django.db import models
 from django.conf import settings
@@ -228,6 +225,9 @@ class ShapeType(str, Enum):
     def choices(self):
         return tuple((x.value, x.name) for x in self)
 
+    def __str__(self):
+        return self.value
+
 class Annotation(models.Model):
     id = models.BigAutoField(primary_key=True)
     job = models.ForeignKey(Job, on_delete=models.CASCADE)
@@ -238,6 +238,20 @@ class Annotation(models.Model):
     class Meta:
         abstract = True
         default_permissions = ()
+
+class Commit(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    author = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL)
+    version = models.PositiveIntegerField(default=0)
+    timestamp = models.DateTimeField(auto_now=True)
+    message = models.CharField(max_length=4096, default="")
+
+    class Meta:
+        abstract = True
+        default_permissions = ()
+
+class JobCommit(Commit):
+    job = models.ForeignKey(Job, on_delete=models.CASCADE, related_name="commits")
 
 class FloatArrayField(models.TextField):
     separator = ","
