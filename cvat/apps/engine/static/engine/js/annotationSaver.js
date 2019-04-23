@@ -23,6 +23,7 @@ class AnnotationSaverModel extends Listener {
         this._initialObjects = [];
 
         this._hash = this._getHash();
+        this._async = false;
 
         // We need use data from export instead of initialData
         // Otherwise we have differ keys order and JSON comparison code incorrect
@@ -41,6 +42,7 @@ class AnnotationSaverModel extends Listener {
             $.ajax({
                 url: `/api/v1/jobs/${window.cvat.job.id}/annotations?action=${action}`,
                 type: 'PATCH',
+                async: this._async,
                 data: JSON.stringify(data),
                 contentType: 'application/json',
             }).done((savedData) => {
@@ -58,6 +60,7 @@ class AnnotationSaverModel extends Listener {
             $.ajax({
                 url: `/api/v1/jobs/${window.cvat.job.id}/annotations`,
                 type: 'PUT',
+                async: this._async,
                 data: JSON.stringify(data),
                 contentType: 'application/json',
             }).done((savedData) => {
@@ -207,7 +210,8 @@ class AnnotationSaverModel extends Listener {
         return this._getHash() !== this._hash;
     }
 
-    async save() {
+    async save(async = true) {
+        this._async = async;
         this.notify('saveStart');
         try {
             const [exported, mapping] = this._shapeCollection.export();
@@ -263,6 +267,7 @@ class AnnotationSaverModel extends Listener {
 
             await this._logs();
         } catch (error) {
+            this._async = true;
             this.notify('saveUnlocked');
             this.notify('saveError', error.message);
             this._state = {
@@ -272,6 +277,7 @@ class AnnotationSaverModel extends Listener {
             throw Error(error);
         }
 
+        this._async = true;
         this._hash = this._getHash();
         this.notify('saveDone');
 
@@ -399,4 +405,6 @@ function buildAnnotationSaver(initialData, shapeCollection) {
     const model = new AnnotationSaverModel(initialData, shapeCollection);
     const controller = new AnnotationSaverController(model);
     new AnnotationSaverView(model, controller);
+
+    return model;
 }

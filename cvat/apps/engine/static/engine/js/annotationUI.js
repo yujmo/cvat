@@ -538,7 +538,7 @@ function buildAnnotationUI(jobData, taskData, imageMetaData, annotationData, loa
     const shapeCollectionView = new ShapeCollectionView(shapeCollectionModel,
         shapeCollectionController);
 
-    buildAnnotationSaver(annotationData, shapeCollectionModel);
+    const annotationSaverModel = buildAnnotationSaver(annotationData, shapeCollectionModel);
 
     window.cvat.data = {
         get: () => shapeCollectionModel.export()[0],
@@ -659,6 +659,12 @@ function buildAnnotationUI(jobData, taskData, imageMetaData, annotationData, loa
             blurAllElements();
         }
     });
+
+    window.dispatchEvent(new CustomEvent('engineReady', {
+        detail: {
+            annotationSaverModel,
+        },
+    }));
 }
 
 
