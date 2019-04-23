@@ -5,7 +5,7 @@
  */
 
 window.addEventListener('engineReady', (e) => {
-    // Auto save each 5 minuts
+    // Auto save each 5 minutes
     $('#autoSaveTime').prop('value', 5);
     $('#autoSaveBox').attr('checked', true);
     $('#autoSaveBox').trigger('change');
