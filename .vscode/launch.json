@@ -119,6 +119,24 @@
             "env": {}
         },
         {
+            "name": "tests",
+            "type": "python",
+            "request": "launch",
+            "debugStdLib": true,
+            "stopOnEntry": false,
+            "pythonPath": "${config:python.pythonPath}",
+            "program": "${workspaceRoot}/manage.py",
+            "args": [
+                "test",
+                "--settings",
+                "cvat.settings.testing",
+                "cvat/apps/engine",
+            ],
+            "django": true,
+            "cwd": "${workspaceFolder}",
+            "env": {}
+        },
+        {
             "name": "cvat.js test",
             "type": "node",
             "request": "launch",
