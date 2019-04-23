@@ -23,7 +23,7 @@ class AnnotationSaverModel extends Listener {
         this._initialObjects = [];
 
         this._hash = this._getHash();
-        this._async = false;
+        this._async = true;
 
         // We need use data from export instead of initialData
         // Otherwise we have differ keys order and JSON comparison code incorrect
