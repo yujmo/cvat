@@ -210,8 +210,8 @@ class AnnotationSaverModel extends Listener {
         return this._getHash() !== this._hash;
     }
 
-    async save(async = true) {
-        this._async = async;
+    async save(asyncRequest = true) {
+        this._async = asyncRequest;
         this.notify('saveStart');
         try {
             const [exported, mapping] = this._shapeCollection.export();
