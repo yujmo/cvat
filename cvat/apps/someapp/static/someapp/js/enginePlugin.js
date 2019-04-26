@@ -23,7 +23,17 @@ window.addEventListener('engineReady', (e) => {
         * onbeforeunload has really strict syntax
         * in particular we can use only synchronous requests
         * if any errors occur, done work will be lost
+        * argument "false" means that save requests will be NOT async
+        * async requests from "onbeforeunload" aren't good
         */
         annotationSaverModel.save(false);
     };
+
+    $('#saveButton').prependTo($('#menuButton').parent())
+        .removeClass('menuButton semiBold').addClass('regular')
+        .css({
+            width: '150px',
+        });
+
+    $('#menuButton').remove();
 });
