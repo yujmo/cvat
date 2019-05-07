@@ -47,7 +47,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Add a non-root user
-ENV USER=${USER}
+ENV USER=yujmo
 ENV HOME /home/${USER}
 WORKDIR ${HOME}
 RUN adduser --shell /bin/bash --disabled-password --gecos "" ${USER}
